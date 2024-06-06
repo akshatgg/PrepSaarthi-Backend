@@ -1,4 +1,4 @@
-const instance = require('../backend/razorpayIns');
+const instance = require('./razorpayIns');
 const app = require('./app')
 const dotenv = require("dotenv");
 const cloudinary = require("cloudinary"); 
