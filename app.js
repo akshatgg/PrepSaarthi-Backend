@@ -9,18 +9,11 @@ const errorCatcher = require("./utils/errorCatcher");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
-const allowedOrigin = "http://192.168.1.1"; // Allow requests from this origin
-
-const corsOptions = {
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      // Allow all origins
-      return callback(null, true);
-    },
-    credentials: true, // Allow credentials
-  };
-app.use(cors(corsOptions));
+const allowedOrigin = process.env.ALLOWEDORIGIN; 
+app.use(   cors({
+    credentials: true,
+  origin: allowedOrigin,
+}));
 app.use(cookieParser());
 
 app.use((req, res, next) => {
