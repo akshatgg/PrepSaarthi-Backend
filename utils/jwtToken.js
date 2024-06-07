@@ -3,6 +3,8 @@ const jwtToken = (user, statusCode, res) => {
     const options = {
       expires: new Date(Date.now() + process.env.COOKIE_EXP * 24 * 60 * 60 * 1000),
       httpOnly: true,
+      sameSite: 'None',
+      httpOnly: true,
     };
   
   
