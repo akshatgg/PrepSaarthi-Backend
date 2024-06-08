@@ -9,8 +9,7 @@ const errorCatcher = require("./utils/errorCatcher");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
-const allowedOrigin = process.env.ALLOWEDORIGIN; 
-console.log(allowedOrigin)
+const allowedOrigin = [process.env.ALLOWEDORIGIN1,process.env.ALLOWEDORIGIN2]; 
 app.use(   cors({
     credentials: true,
   origin: allowedOrigin,
