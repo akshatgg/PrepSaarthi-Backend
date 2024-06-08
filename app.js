@@ -10,6 +10,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
 const allowedOrigin = process.env.ALLOWEDORIGIN; 
+console.log(allowedOrigin)
 app.use(   cors({
     credentials: true,
   origin: allowedOrigin,
