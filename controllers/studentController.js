@@ -298,7 +298,7 @@ exports.updatePassword = errorCatcherAsync(async (req, res, next) => {
 
 // //  update personal info
 
-exports.updateProfile = errorCatcherAsync(async (req, res, next) => {
+exports.updateStudentProfile = errorCatcherAsync(async (req, res, next) => {
   const newUserData = {
     email: req.body.email,
     name: req.body.name,
@@ -334,64 +334,64 @@ exports.updateProfile = errorCatcherAsync(async (req, res, next) => {
 
 //Update mentor info
 
-exports.updateStudentInfo = errorCatcherAsync(async (req, res, next) => {
-  const newUserData = {
-    isDropper: req.body.isDropper,
-    studyMode: req.body.studyMode,
-    branch: req.body.branch,
-    exam: JSON.parse(req.body.exam),
-    yearOfStudy: req.body.yearOfStudy,
-    linkedin: req.body.linkedin,
-    youtube: req.body.youtube,
-    about: req.body.about,
-    desc: req.body.disc,
-    pricePerMonth: req.body.ppm,
-    pricePerDay: req.body.ppd,
-    isStepLastCompleted: true,
-  };
-  if (
-    !newUserData.isDropper ||
-    !newUserData.studyMode ||
-    !newUserData.exam ||
-    !newUserData.linkedin ||
-    !newUserData.youtube ||
-    !newUserData.about ||
-    !newUserData.desc ||
-    !newUserData.pricePerMonth ||
-    !newUserData.pricePerDay ||
-    !req.body.idCard
-  ) {
-    return next(
-      new ErrorHandler(
-        "All fields are compulsory. Kindly fill every fields",
-        400
-      )
-    );
-  }
+// exports.updateStudentInfo = errorCatcherAsync(async (req, res, next) => {
+//   const newUserData = {
+//     isDropper: req.body.isDropper,
+//     studyMode: req.body.studyMode,
+//     branch: req.body.branch,
+//     exam: JSON.parse(req.body.exam),
+//     yearOfStudy: req.body.yearOfStudy,
+//     linkedin: req.body.linkedin,
+//     youtube: req.body.youtube,
+//     about: req.body.about,
+//     desc: req.body.disc,
+//     pricePerMonth: req.body.ppm,
+//     pricePerDay: req.body.ppd,
+//     isStepLastCompleted: true,
+//   };
+//   if (
+//     !newUserData.isDropper ||
+//     !newUserData.studyMode ||
+//     !newUserData.exam ||
+//     !newUserData.linkedin ||
+//     !newUserData.youtube ||
+//     !newUserData.about ||
+//     !newUserData.desc ||
+//     !newUserData.pricePerMonth ||
+//     !newUserData.pricePerDay ||
+//     !req.body.idCard
+//   ) {
+//     return next(
+//       new ErrorHandler(
+//         "All fields are compulsory. Kindly fill every fields",
+//         400
+//       )
+//     );
+//   }
 
-  try {
-    const myCloud = await cloudinary.v2.uploader.upload(req.body.idCard, {
-      folder: "idcard",
-      width: 400,
-      crop: "scale",
-    });
+//   try {
+//     const myCloud = await cloudinary.v2.uploader.upload(req.body.idCard, {
+//       folder: "idcard",
+//       width: 400,
+//       crop: "scale",
+//     });
 
-    newUserData.idCard = {
-      public_ID: myCloud.public_id,
-      public_URI: myCloud.secure_url,
-    };
-  } catch (e) {
-  }
-  await Student.findByIdAndUpdate(req.user.id, newUserData, {
-    new: true,
-    runValidators: true,
-    useFindAndModify: false,
-  });
+//     newUserData.idCard = {
+//       public_ID: myCloud.public_id,
+//       public_URI: myCloud.secure_url,
+//     };
+//   } catch (e) {
+//   }
+//   await Student.findByIdAndUpdate(req.user.id, newUserData, {
+//     new: true,
+//     runValidators: true,
+//     useFindAndModify: false,
+//   });
 
-  res.status(200).json({
-    success: true,
-  });
-});
+//   res.status(200).json({
+//     success: true,
+//   });
+// });
 
 // Get a single user
 exports.getSingleUsers = errorCatcherAsync(async (req, res, next) => {

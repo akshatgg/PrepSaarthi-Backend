@@ -3,7 +3,7 @@ const express = require("express");
 const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
 const roleAuth = require("../utils/roleAuth");
 
-const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateProfile, updateStudentInfo, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull,} = require("../controllers/studentController");
+const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull,} = require("../controllers/studentController");
 const { createMentorReview, getMentorReviews, deleteReview } = require("../controllers/mentorController");
 const router = express.Router();
 
@@ -17,8 +17,7 @@ router.route("/student/self").get(isAuthorizeStu, loadUserDetails);
 router.route("/student/user/info/:id").get(getStudentDetails);
 router.route("/student/get/successcon/:id").get(allConnectionSuccessfull);
 router.route("/student/self/update/password").put(isAuthorizeStu, updatePassword);
-router.route("/student/self/update/profile").put(isAuthorizeStu, updateProfile);
-router.route("/student/self/update/profile/info").put(isAuthorizeStu, updateStudentInfo);
+router.route("/student/self/update/profile").put(isAuthorizeStu, updateStudentProfile);
 router.route("/student/buy/mentorship/week").post(isAuthorizeStu, buyMentorShipDay);
 router.route("/student/past/mentorship").get(isAuthorizeStu, getAllAssignedMentors);
 router.route("/student/active/mentorship").get(isAuthorizeStu, getActiveMentorship);

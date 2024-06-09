@@ -65,7 +65,7 @@ const studentSchema = new mongoose.Schema({
 
   role: {
     type: String,
-    default: "user",
+    default: "student",
   },
 
   subscription : {
