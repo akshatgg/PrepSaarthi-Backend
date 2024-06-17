@@ -1,13 +1,17 @@
 const ErrorHandler = require("../utils/errorHandeler");
 const errorCatcherAsync = require("../utils/errorCatcherAsync");
 const Mentor = require("../models/mentorModel");
+const bcryptjs = require("bcryptjs");
 const Student = require("../models/studentModel.js");
+const OTPGenerate = require("../models/userVerficationOtp.js");
 const Connection = require("../models/connectionModel.js");
 const jwtToken = require("../utils/jwtToken");
 const { resetPasswordMessage } = require("../utils/mailformat.js");
+const { passwordchange } = require("../utils/passwordchange.js");
 const crypto = require("crypto");
 const cloudinary = require("cloudinary");
 const sendMail = require("../utils/sendMail.js");
+const otpSender = require("../utils/otpSender.js");
 //Registering a USER
 
 exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
@@ -87,22 +91,19 @@ exports.logout = errorCatcherAsync(async (req, res, next) => {
 
 exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
   const user = await Mentor.findOne({ email: req.body.email });
+  const stuUser = await Student.findOne({ email: req.body.email });
 
-  if (!user || !user.isActive) {
+  if (!user || !user.isActive ) {
+    if(!stuUser || !stuUser.isActive){
     return next(new ErrorHandler("User not found", 404));
+    }
   }
 
-  const resetToken = user.generateResetPasswordToken();
-
-  await user.save({ validateBeforeSave: false });
-
-  const resetPasswordURI = `${process.env.FRONTEND_URL}/password/reset/${resetToken}`;
-
-  const message = resetPasswordMessage(user, resetPasswordURI);
-
+  const otp = await generateOtp(user || stuUser);
+  const message = resetPasswordMessage(user || stuUser, otp);
   try {
     await sendMail({
-      email: user.email,
+      email: user?.email || stuUser?.email,
       subject: "PrepSaarthi Password Recovery Support",
       message,
     });
@@ -110,13 +111,9 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: `An email for password recovery has been  sent to your registered email`,
+      userId:user?._id || stuUser?._id
     });
   } catch (e) {
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-
-    await user.save({ validateBeforeSave: false });
-
     return next(new ErrorHandler(e.message, 500));
   }
 });
@@ -124,42 +121,66 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
 // //Reset Password
 
 exports.resetPassord = errorCatcherAsync(async (req, res, next) => {
-  const resetPasswordToken = crypto
-    .createHash("sha256")
-    .update(req.params.tkid)
-    .toString("hex");
-
-  const user = await Mentor.findOne({
-    resetPasswordToken,
-    resetPasswordExpire: { $gt: Date.now() },
-  });
-  if (!user) {
-    return next(new ErrorHandler("Invalid or Expired Token", 400));
+  const { otp, userId } = req.body;
+  if (!otp) {
+    return next(new ErrorHandler("Please enter the otp", 400));
   }
+
+  const userOTPVerification = await OTPGenerate.find({ userId });
+
+  if (userOTPVerification.length <= 0) {
+    return next(
+      new ErrorHandler(
+        "Invalid Request"
+      )
+    );
+  }
+  const { expiresIn } = userOTPVerification[0];
+
+  const hashedOTP = userOTPVerification[0].otp;
+
+  if (expiresIn < Date.now()) {
+    await OTPGenerate.deleteMany({ userId});
+    return next(new ErrorHandler("Invalid OTP"));
+  }
+
+  const validOTP = await bcryptjs.compare(otp, hashedOTP);
+
+  if (!validOTP) {
+    return next(new ErrorHandler("Inavlid OTP. Please try again"));
+  }
+
 
   if (req.body.password !== req.body.confirmPassword) {
     return next(new ErrorHandler("Both the password must match", 400));
   }
+  const user = await Mentor.findOne({ _id: userId });
+  const stuUser = await Student.findOne({ _id: userId});
 
-  user.password = req.body.password;
-
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpire = undefined;
-
+  if(user){
+    user.password = req.body.password;
   await user.save();
-  const message = passwordChange(user);
-
-  try {
-    await sendMail({
-      email: user.email,
-      subject: "Your password has been changed",
-      message,
-    });
-
-    jwtMssg(user, 200, res);
-  } catch (e) {
-    return next(new ErrorHandler(e.message, 500));
+  } 
+  if(stuUser){
+    stuUser.password = req.body.password;
+    await stuUser.save();
   }
+  if(!user && !stuUser){
+    return next(new ErrorHandler("No account exists", 404))
+  }
+  const message = passwordchange(user || stuUser);
+try {
+  await sendMail({
+    email: user?.email || stuUser?.email,
+    subject: "Your password has been changed",
+    message,
+    });
+    
+    await OTPGenerate.deleteMany({ userId});
+    jwtToken(user || stuUser, 200, res);
+} catch (e) {
+  return next(new ErrorHandler(e.message, 500));
+}
 });
 
 // // Get User Detail
@@ -663,8 +684,7 @@ exports.createMentorReview = errorCatcherAsync(async (req, res, next) => {
 });
 
 exports.deleteReview = errorCatcherAsync(async (req, res, next) => {
-  if(req.query.userId.toString() !== req.user._id.toString()){
-
+  if (req.query.userId.toString() !== req.user._id.toString()) {
     return next(new ErrorHandler("Action not allowed", 401));
   }
   const mentor = await Mentor.findById(req.query.mentorId);
@@ -710,14 +730,13 @@ exports.deleteReview = errorCatcherAsync(async (req, res, next) => {
 });
 
 exports.getMentorReviews = errorCatcherAsync(async (req, res, next) => {
-  const mentor = await Mentor.findById(req.query.mentorId)
-  .populate({
-    path:'reviews',
+  const mentor = await Mentor.findById(req.query.mentorId).populate({
+    path: "reviews",
     populate: {
       path: "user",
       select: "avatar", // Specify the fields you want to retrieve
     },
-  })
+  });
 
   if (!mentor) {
     return next(new ErrorHandler("Mentor not found", 404));
@@ -726,5 +745,109 @@ exports.getMentorReviews = errorCatcherAsync(async (req, res, next) => {
   res.status(200).json({
     success: true,
     reviews: mentor.reviews,
+  });
+});
+
+//Generate OTP
+const generateOtp = async (user) => {
+  const otp = `${Math.floor(10000 + Math.random() * 90000)}`;
+
+  //Send Mail
+  const saltRound = 10;
+
+  const hashedOtp = await bcryptjs.hash(otp, saltRound);
+  const otpExists = await OTPGenerate.findOne({ userId: user._id });
+
+  if (!otpExists) {
+    await OTPGenerate.create({
+      userId: user._id,
+      otp: hashedOtp,
+      expiresIn: Date.now() + 10 * 60 * 1000,
+    });
+  } else {
+    otpExists.otp = hashedOtp;
+    otpExists.expiresIn = Date.now() + 10 * 60 * 1000;
+    await otpExists.save();
+  }
+  return otp;
+  
+};
+
+exports.verifyOTP = errorCatcherAsync(async (req, res, next) => {
+  const { otp } = req.body;
+  if (!otp) {
+    return next(new ErrorHandler("Please enter the otp", 400));
+  }
+
+  const userOTPVerification = await OTPGenerate.find({ userId: req.user._id });
+
+  if (userOTPVerification.length <= 0) {
+    return next(
+      new ErrorHandler(
+        "Account doesn't exists or already verified.Please login or signup"
+      )
+    );
+  }
+  const { expiresIn } = userOTPVerification[0];
+
+  const hashedOTP = userOTPVerification[0].otp;
+
+  if (expiresIn < Date.now()) {
+    await OTPGenerate.deleteMany({ userId: req.user._id });
+    return next(new ErrorHandler("Invalid OTP"));
+  }
+
+  const validOTP = await bcryptjs.compare(otp, hashedOTP);
+
+  if (!validOTP) {
+    return next(new ErrorHandler("Inavlid OTP. Please try again"));
+  }
+
+  await Mentor.updateOne({ _id: req.user._id }, { verified: true });
+  await Student.updateOne({ _id: req.user._id }, { verified: true });
+
+  await OTPGenerate.deleteMany({ userId: req.user._id });
+
+  res.status(200).json({
+    status: "success",
+    message: "User verified successfully",
+    role: req.user.role,
+    user: req.user._id,
+  });
+});
+
+exports.resendOTP = errorCatcherAsync(async (req, res, next) => {
+  const user = req.user;
+  const otp = await generateOtp(user);
+  try {
+    await sendMail({
+      email: user.email,
+      subject: `Verification OTP ${otp}`,
+      html: `<p>Your OTP is<p><p><strong>${otp}</strong></p>`,
+    });
+  } catch (e) {
+    return next(new ErrorHandler(e.message, 500));
+  }
+  res.status(200).json({
+    status: "success",
+    message: "OTP resent successfully",
+  });
+});
+
+exports.sendOTP = errorCatcherAsync(async (req, res, next) => {
+  const user = req.user;
+  const otp = await generateOtp(user);
+  try {
+    await sendMail({
+      email: user.email,
+      subject: `Verification OTP ${otp}`,
+      html: `<p>Your OTP is<p><p><strong>${otp}</strong></p>`,
+    });
+  } catch (e) {
+    return next(new ErrorHandler(e.message, 500));
+  }
+  res.status(200).json({
+    status: "success",
+    message: "OTP sent successfully",
   });
 });

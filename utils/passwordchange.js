@@ -1,4 +1,4 @@
-exports.resetPasswordMessage = (user, URI) => {
+exports.passwordchange = (user) => {
     return (
        `<html>
         <head>
@@ -52,11 +52,9 @@ exports.resetPasswordMessage = (user, URI) => {
          <img src="https://i.ibb.co/VvjDSDt/Group-11.png" alt="Group-11">
           <h2>Hello ${user.name}!!</h2>
           <p>
-            We have received a request to update your account password.
+           Your password is changed recently.
           </p>
-          <p>OTP to change your password: <strong>${URI}</strong></p>
-          <p><em>If you did not initiate this request,please ignore this message.<em></p>  
-          <p><em>Have a great day! :)<em></p>
+          
             </div>
         </body>
       </html>`

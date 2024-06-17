@@ -4,7 +4,7 @@ const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
 const roleAuth = require("../utils/roleAuth");
 
 const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull,} = require("../controllers/studentController");
-const { createMentorReview, getMentorReviews, deleteReview } = require("../controllers/mentorController");
+const { createMentorReview, getMentorReviews, deleteReview, verifyOTP } = require("../controllers/mentorController");
 const router = express.Router();
 
 router.route("/student/register").post(reegisterStudent);
@@ -37,5 +37,7 @@ router
 //   .get(isAuth, roleAuth("admin"), getSingleUsers)
 //   .put(isAuth, roleAuth("admin"), updateRole)
 //   .delete(isAuth, roleAuth("admin"), deleteUser);
+//common routes
+router.route("/student/verify/otp").post(isAuthorizeStu, verifyOTP)
 
 module.exports = router;

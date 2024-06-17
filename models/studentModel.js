@@ -19,8 +19,13 @@ const studentSchema = new mongoose.Schema({
     validate: [validate.isEmail, "Please enter a valid email"],
   },
 
-
-     signedUpFor : {
+  verified:{
+    type:Boolean,
+    default:false,
+    required:true,
+  },
+  
+  signedUpFor : {
     type:String,
     default:"student"
    },

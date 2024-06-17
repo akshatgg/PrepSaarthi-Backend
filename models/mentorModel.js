@@ -12,6 +12,12 @@ const mentorSchema = new mongoose.Schema({
     minLength: [3, "Length of your name should be more than 3 characters"],
   },
 
+  verified:{
+    type:Boolean,
+    default:false,
+    required:true,
+  },
+  
   email: {
     type: String,
     required: [true, "Please enter your email"],
