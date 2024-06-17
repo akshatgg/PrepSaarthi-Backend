@@ -9,7 +9,7 @@ const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentor
 const router = express.Router();
 
 
-router.route("/register/mentor").post(upload.single('image'), registerMentor);
+router.route("/register/mentor").post(registerMentor);
 router.route("/login").post(loginMentor);
 router.route("/logout").post(logout);
 router.route("/password/forgot").post(forgotPass);
