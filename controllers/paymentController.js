@@ -102,7 +102,7 @@ exports.paymentVerification = errorCatcherAsync(async (req, res, next) => {
         await user.save({ validateBeforeSave: false });
     
         res.redirect(
-          `http://localhost:3000/payment/success?reference=${razorpay_payment_id}`
+          `http://${process.env.FRONTEND_URL}/payment/success?reference=${razorpay_payment_id}`
         );
       } else {
         res.status(400).json({
