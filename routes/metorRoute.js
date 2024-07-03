@@ -5,7 +5,7 @@ const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
 const upload = require('../middlewares/multer')
 const roleAuth = require("../utils/roleAuth");
 const rateLimit = require('../utils/checkLastOtp')
-const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, verifyOTP, resendOTP, sendOTP } = require("../controllers/mentorController");
+const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, verifyOTP, resendOTP, sendOTP, updateMentoringStatus } = require("../controllers/mentorController");
 const router = express.Router();
 
 
@@ -34,6 +34,7 @@ router.route("/admins/all").get(isAuthorize,roleAuth("admin"), getAllAdmin)
 router.route("/admin/user/delete/:id").delete(isAuthorize,roleAuth("admin"), deleteUser)
 router.route("/admin/all/connection/").get(isAuthorize,roleAuth("admin"), allConnection)
 router.route("/mentor/all/connection/").get(isAuthorize,roleAuth("mentor"), allMentorConnection)
+router.route("/mentor/update/status").put(isAuthorize,roleAuth("mentor"), updateMentoringStatus)
 router.route("/admin/edit/connection/:id").put(isAuthorize,roleAuth("admin"), assignConnection)
 router.route("/admin/remove/connections").put(isAuthorize,roleAuth("admin"), removeConnection)
 

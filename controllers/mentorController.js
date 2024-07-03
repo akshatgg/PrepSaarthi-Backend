@@ -295,6 +295,20 @@ exports.updateProfile = errorCatcherAsync(async (req, res, next) => {
     success: true,
   });
 });
+exports.updateMentoringStatus = errorCatcherAsync(async (req, res, next) => {
+  const newUserData = {
+    mentoringStatus: req.body.status,
+  };
+  await Mentor.findByIdAndUpdate(req.user.id, newUserData, {
+    new: true,
+    runValidators: true,
+    useFindAndModify: false,
+  });
+
+  res.status(200).json({
+    success: true,
+  });
+});
 
 //Update mentor info
 
@@ -447,12 +461,13 @@ exports.getAllStudents = errorCatcherAsync(async (req, res, next) => {
 });
 //Get all mentors(admin)
 exports.getAllMentorsAdmin = errorCatcherAsync(async (req, res, next) => {
-  const users = await Mentor.find({ role: "mentor" });
+  const users = await Mentor.find({ $or: [{ role: "mentor" }, { role: "user" }] });
   res.status(200).json({
     success: true,
     users,
   });
 });
+
 //Get all Admins(admin)
 exports.getAllAdmin = errorCatcherAsync(async (req, res, next) => {
   const users = await Mentor.find({ role: "admin" });
