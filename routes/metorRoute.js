@@ -2,14 +2,27 @@ const express = require("express");
 
 const isAuthorize = require("../middlewares/isAuthorize");
 const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
-const upload = require('../middlewares/multer')
 const roleAuth = require("../utils/roleAuth");
 const rateLimit = require('../utils/checkLastOtp')
-const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, verifyOTP, resendOTP, sendOTP, updateMentoringStatus } = require("../controllers/mentorController");
+const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, verifyOTP, resendOTP, sendOTP, updateMentoringStatus, uploadMulter } = require("../controllers/mentorController");
+const multer = require("multer");
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: { fieldSize: 10 * 1024 * 1024 }, // Limit file size to 10 MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only images are allowed.'));
+    }
+  }
+});
+
 const router = express.Router();
 
-
-router.route("/register/mentor").post(registerMentor);
+// router.route('/upload/multer').post(upload.single('file'), uploadMulter)
+router.route("/register/mentor").post(upload.single('avatar'),registerMentor);
 router.route("/login").post(loginMentor);
 router.route("/logout").post(logout);
 router.route("/password/forgot").post(forgotPass);

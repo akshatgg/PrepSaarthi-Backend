@@ -13,6 +13,10 @@ const cloudinary = require("cloudinary");
 const sendMail = require("../utils/sendMail.js");
 const otpSender = require("../utils/otpSender.js");
 //Registering a USER
+exports.uploadMulter = errorCatcherAsync(async (req, res, next) => {
+  console.log('di')
+ res.json(req.file)
+});
 
 exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
   const userCheck = await Student.findOne({ email: req.body.email });
@@ -233,11 +237,10 @@ exports.loadUserDetails = errorCatcherAsync(async (req, res, next) => {
 
 exports.updatePassword = errorCatcherAsync(async (req, res, next) => {
   const user = await Mentor.findById(req.user.id).select("+password");
-
   if (!req.body.oldPassword) {
     return next(new ErrorHandler("Kindly enter your old Password", 400));
   }
-
+  
   if (!req.body.newPassword || !req.body.confirmPassword) {
     return next(
       new ErrorHandler("Please enter your new password in both feilds", 400)
@@ -247,14 +250,15 @@ exports.updatePassword = errorCatcherAsync(async (req, res, next) => {
   if (req.body.newPassword !== req.body.confirmPassword) {
     return next(new ErrorHandler("Both password must match", 400));
   }
-
+  
   const isPassword = await user.verifyPassword(req.body.oldPassword);
-
+  
   if (!isPassword) {
     return next(new ErrorHandler("Old Password is incorrect ! Try again", 400));
   }
-
+  
   user.password = req.body.newPassword;
+  console.log('user', isPassword)
   await user.save();
 
   jwtToken(user, 200, res);

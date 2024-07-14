@@ -23,7 +23,9 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(fileUpload());
+// app.use(fileUpload({
+//   limits: { fileSize: 10 * 1024 * 1024 },
+// }));
 // Route Import
 
 app.use("/v1", counter);

@@ -5,9 +5,22 @@ const roleAuth = require("../utils/roleAuth");
 
 const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull,} = require("../controllers/studentController");
 const { createMentorReview, getMentorReviews, deleteReview, verifyOTP } = require("../controllers/mentorController");
+const multer = require("multer");
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: { fieldSize: 10 * 1024 * 1024 }, // Limit file size to 10 MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only images are allowed.'));
+    }
+  }
+});
 const router = express.Router();
 
-router.route("/student/register").post(reegisterStudent);
+router.route("/student/register").post(upload.single('avatar'), reegisterStudent);
 router.route("/student/login").post(loginStudent);
 router.route("/student/logout").post(logout);
 router.route("/student/password/forgot").post(forgotPass);
