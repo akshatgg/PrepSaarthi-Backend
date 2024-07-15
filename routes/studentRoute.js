@@ -30,7 +30,7 @@ router.route("/student/self").get(isAuthorizeStu, loadUserDetails);
 router.route("/student/user/info/:id").get(getStudentDetails);
 router.route("/student/get/successcon/:id").get(allConnectionSuccessfull);
 router.route("/student/self/update/password").put(isAuthorizeStu, updatePassword);
-router.route("/student/self/update/profile").put(isAuthorizeStu, updateStudentProfile);
+router.route("/student/self/update/profile").put(isAuthorizeStu,upload.single('avatar') , updateStudentProfile);
 router.route("/student/buy/mentorship/week").post(isAuthorizeStu, buyMentorShipDay);
 router.route("/student/past/mentorship").get(isAuthorizeStu, getAllAssignedMentors);
 router.route("/student/active/mentorship").get(isAuthorizeStu, getActiveMentorship);

@@ -31,9 +31,9 @@ router.route("/password/reset").put(resetPassord);
 router.route("/self").get(isAuthorize, loadUserDetails);
 router.route("/user/info/:id").get(getMentorDetails);
 router.route("/self/update/password").put(isAuthorize, updatePassword);
-router.route("/self/update/profile").put(isAuthorize, updateProfile);
-router.route("/self/update/profile/info").put(isAuthorize, updateMentorInfo);
-router.route("/self/update/profile/info/after").put(isAuthorize, updateMentorInfoAfter);
+router.route("/self/update/profile").put(isAuthorize, upload.single('avatar'), updateProfile);
+router.route("/self/update/profile/info").put(isAuthorize,upload.single('avatar'), updateMentorInfo);
+router.route("/self/update/profile/info/after").put(isAuthorize,upload.single('avatar'), updateMentorInfoAfter);
 // router.route("/user/info/:id").get(getSingleUsers);
 
 // // Admin Routes

@@ -138,6 +138,9 @@ const mentorSchema = new mongoose.Schema({
       type: String,
     },
   },
+  idCardOld: {
+   type:String
+  },
 
   college: {
     public_ID: {
@@ -186,11 +189,19 @@ const mentorSchema = new mongoose.Schema({
 
   pricePerMonth: {
     type: Number,
-    maxLength: [8, "Price cannot exceed 8 characters"],
+    maxLength: [5, "Price cannot exceed 5 characters"],
   },
   pricePerDay: {
     type: Number,
-    maxLength: [8, "Price cannot exceed 8 characters"],
+    maxLength: [5, "Price cannot exceed 5 characters"],
+  },
+  pricePerMonthOld: {
+    type: Number,
+    maxLength: [5, "Price cannot exceed 5 characters"],
+  },
+  pricePerDayOld: {
+    type: Number,
+    maxLength: [5, "Price cannot exceed 5 characters"],
   },
 
   role: {

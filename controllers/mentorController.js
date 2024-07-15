@@ -14,8 +14,8 @@ const sendMail = require("../utils/sendMail.js");
 const otpSender = require("../utils/otpSender.js");
 //Registering a USER
 exports.uploadMulter = errorCatcherAsync(async (req, res, next) => {
-  console.log('di')
- res.json(req.file)
+  console.log("di");
+  res.json(req.file);
 });
 
 exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
@@ -97,9 +97,9 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
   const user = await Mentor.findOne({ email: req.body.email });
   const stuUser = await Student.findOne({ email: req.body.email });
 
-  if (!user || !user.isActive ) {
-    if(!stuUser || !stuUser.isActive){
-    return next(new ErrorHandler("User not found", 404));
+  if (!user || !user.isActive) {
+    if (!stuUser || !stuUser.isActive) {
+      return next(new ErrorHandler("User not found", 404));
     }
   }
 
@@ -115,7 +115,7 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: `An email for password recovery has been  sent to your registered email`,
-      userId:user?._id || stuUser?._id
+      userId: user?._id || stuUser?._id,
     });
   } catch (e) {
     return next(new ErrorHandler(e.message, 500));
@@ -133,18 +133,14 @@ exports.resetPassord = errorCatcherAsync(async (req, res, next) => {
   const userOTPVerification = await OTPGenerate.find({ userId });
 
   if (userOTPVerification.length <= 0) {
-    return next(
-      new ErrorHandler(
-        "Invalid Request"
-      )
-    );
+    return next(new ErrorHandler("Invalid Request"));
   }
   const { expiresIn } = userOTPVerification[0];
 
   const hashedOTP = userOTPVerification[0].otp;
 
   if (expiresIn < Date.now()) {
-    await OTPGenerate.deleteMany({ userId});
+    await OTPGenerate.deleteMany({ userId });
     return next(new ErrorHandler("Invalid OTP"));
   }
 
@@ -154,37 +150,36 @@ exports.resetPassord = errorCatcherAsync(async (req, res, next) => {
     return next(new ErrorHandler("Inavlid OTP. Please try again"));
   }
 
-
   if (req.body.password !== req.body.confirmPassword) {
     return next(new ErrorHandler("Both the password must match", 400));
   }
   const user = await Mentor.findOne({ _id: userId });
-  const stuUser = await Student.findOne({ _id: userId});
+  const stuUser = await Student.findOne({ _id: userId });
 
-  if(user){
+  if (user) {
     user.password = req.body.password;
-  await user.save();
-  } 
-  if(stuUser){
+    await user.save();
+  }
+  if (stuUser) {
     stuUser.password = req.body.password;
     await stuUser.save();
   }
-  if(!user && !stuUser){
-    return next(new ErrorHandler("No account exists", 404))
+  if (!user && !stuUser) {
+    return next(new ErrorHandler("No account exists", 404));
   }
   const message = passwordchange(user || stuUser);
-try {
-  await sendMail({
-    email: user?.email || stuUser?.email,
-    subject: "Your password has been changed",
-    message,
+  try {
+    await sendMail({
+      email: user?.email || stuUser?.email,
+      subject: "Your password has been changed",
+      message,
     });
-    
-    await OTPGenerate.deleteMany({ userId});
+
+    await OTPGenerate.deleteMany({ userId });
     jwtToken(user || stuUser, 200, res);
-} catch (e) {
-  return next(new ErrorHandler(e.message, 500));
-}
+  } catch (e) {
+    return next(new ErrorHandler(e.message, 500));
+  }
 });
 
 // // Get User Detail
@@ -216,6 +211,10 @@ exports.getMentorDetails = errorCatcherAsync(async (req, res, next) => {
       about: user.about,
       ppm: user.pricePerMonth,
       ppd: user.pricePerDay,
+      ppmO:user.pricePerMonthOld,
+      ppdO:user.pricePerDayOld,
+      idO:user.idCardOld,
+      isUpd:user.updateRequest
     },
   });
 });
@@ -240,7 +239,7 @@ exports.updatePassword = errorCatcherAsync(async (req, res, next) => {
   if (!req.body.oldPassword) {
     return next(new ErrorHandler("Kindly enter your old Password", 400));
   }
-  
+
   if (!req.body.newPassword || !req.body.confirmPassword) {
     return next(
       new ErrorHandler("Please enter your new password in both feilds", 400)
@@ -250,15 +249,15 @@ exports.updatePassword = errorCatcherAsync(async (req, res, next) => {
   if (req.body.newPassword !== req.body.confirmPassword) {
     return next(new ErrorHandler("Both password must match", 400));
   }
-  
+
   const isPassword = await user.verifyPassword(req.body.oldPassword);
-  
+
   if (!isPassword) {
     return next(new ErrorHandler("Old Password is incorrect ! Try again", 400));
   }
-  
+
   user.password = req.body.newPassword;
-  console.log('user', isPassword)
+  console.log("user", isPassword);
   await user.save();
 
   jwtToken(user, 200, res);
@@ -270,7 +269,7 @@ exports.updateProfile = errorCatcherAsync(async (req, res, next) => {
   const newUserData = {
     email: req.body.email,
     name: req.body.name,
-    mobileNumber: req.body.number,
+    mobileNumber: req.body.mobileNumber,
     collegeName: req.body.collegeName,
   };
   if (req.body.avatar && req.body.avatar !== " ") {
@@ -400,16 +399,29 @@ exports.updateMentorInfoAfter = errorCatcherAsync(async (req, res, next) => {
       crop: "scale",
     });
 
+    newUserData.idCardOld = 'idcard'
     newUserData.idCard = {
       public_ID: myCloud.public_id,
       public_URI: myCloud.secure_url,
     };
     newUserData.updateRequest = "yes";
+    newUserData.isPending = "yes";
+    newUserData.isApproved = "no";
+    newUserData.role = "user";
   }
   if (
     parseInt(pricePerDay) !== parseInt(req.body.ppd) ||
     parseInt(pricePerMonth) !== parseInt(req.body.ppm)
   ) {
+    if (parseInt(pricePerMonth) !== parseInt(req.body.ppm)) {
+      newUserData.pricePerMonthOld = data.pricePerMonth;
+    }
+    if (parseInt(pricePerDay) !== parseInt(req.body.ppd)) {
+      newUserData.pricePerDayOld = data.pricePerDay;
+    }
+    newUserData.isPending = "yes";
+    newUserData.isApproved = "no";
+    newUserData.role = "user";
     newUserData.updateRequest = "yes";
   }
 
@@ -465,7 +477,9 @@ exports.getAllStudents = errorCatcherAsync(async (req, res, next) => {
 });
 //Get all mentors(admin)
 exports.getAllMentorsAdmin = errorCatcherAsync(async (req, res, next) => {
-  const users = await Mentor.find({ $or: [{ role: "mentor" }, { role: "user" }] });
+  const users = await Mentor.find({
+    $or: [{ role: "mentor" }, { role: "user" }],
+  });
   res.status(200).json({
     success: true,
     users,
@@ -484,7 +498,14 @@ exports.getAllAdmin = errorCatcherAsync(async (req, res, next) => {
 // //  Get all request(admin)
 
 exports.getAllMentorByStatus = errorCatcherAsync(async (req, res, next) => {
+  const usersUpdation = await Mentor.find({
+    updateRequest:'yes',
+    isPending: "yes",
+    isApproved: "no",
+    isStepLastCompleted: true,
+  });
   const usersPending = await Mentor.find({
+    updateRequest:'no',
     isPending: "yes",
     isApproved: "no",
     isStepLastCompleted: true,
@@ -501,6 +522,7 @@ exports.getAllMentorByStatus = errorCatcherAsync(async (req, res, next) => {
   });
   res.status(200).json({
     success: true,
+    usersUpdation,
     usersPending,
     userRejected,
     userApproved,
@@ -542,6 +564,7 @@ exports.updateRole = errorCatcherAsync(async (req, res, next) => {
     user.isApproved = "yes";
     user.isPending = "no";
     user.isRejected = "no";
+    user.updateRequest = "no";
   }
   if (req.body.role === "user") {
     user.isApproved = "no";
@@ -789,7 +812,6 @@ const generateOtp = async (user) => {
     await otpExists.save();
   }
   return otp;
-  
 };
 
 exports.verifyOTP = errorCatcherAsync(async (req, res, next) => {

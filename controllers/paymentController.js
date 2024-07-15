@@ -9,6 +9,7 @@ const ErrorHandler = require("../utils/errorHandeler.js");
 
 exports.checkout = errorCatcherAsync(async (req, res, next) => {
   const amount = req.body.amount * 100
+  const duration = req.body.duration
   const options = {
     amount , 
     currency: "INR",
@@ -16,6 +17,7 @@ exports.checkout = errorCatcherAsync(async (req, res, next) => {
   const order = await instance.orders.create(options)
   res.status(200).json({
       success:true,
+      duration,
       order
     }) 
 });
@@ -59,7 +61,8 @@ exports.createPlan = errorCatcherAsync(async (req, res, next) => {
 exports.paymentVerification = errorCatcherAsync(async (req, res, next) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
     req.body;
-    const { id, price } = req.query
+    const { id, price , duration} = req.query
+    console.log(duration)
     
   const body = razorpay_order_id + "|" + razorpay_payment_id;
   const expectedSignature = crypto
@@ -93,7 +96,7 @@ exports.paymentVerification = errorCatcherAsync(async (req, res, next) => {
         const connection = {
           studentDetails:req.user.id,
           mentorDetails:id,
-          expiresIn:new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)),
+          expiresIn:duration === 'week' ? new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)) : (duration === 'day'? new Date(Date.now() + (1 * 24 * 60 * 60 * 1000)): new Date(Date.now())),
           isActive:true,
           isConnected:false,
           price:price
