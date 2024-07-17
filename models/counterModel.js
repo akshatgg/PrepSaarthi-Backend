@@ -2,13 +2,13 @@ const mongoose = require("mongoose");
 
 const counterSchema = new mongoose.Schema({
   visits: {
-    type: Number,
-    default:0
-},
-views: {
-    type: Number,
-    default:0
-  }
+    counts: { type: Number, default: 0 },
+    date:{ type:Array}
+  },
+  views: {
+    counts: { type: Number, default: 0 },
+    date:{ type:Array}
+  },
 });
 
 module.exports = mongoose.model("Counter", counterSchema);
