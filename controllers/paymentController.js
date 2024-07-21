@@ -62,7 +62,6 @@ exports.paymentVerification = errorCatcherAsync(async (req, res, next) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
     req.body;
     const { id, price , duration} = req.query
-    console.log(duration)
     
   const body = razorpay_order_id + "|" + razorpay_payment_id;
   const expectedSignature = crypto
@@ -96,7 +95,7 @@ exports.paymentVerification = errorCatcherAsync(async (req, res, next) => {
         const connection = {
           studentDetails:req.user.id,
           mentorDetails:id,
-          expiresIn:duration === 'week' ? new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)) : (duration === 'day'? new Date(Date.now() + (1 * 24 * 60 * 60 * 1000)): new Date(Date.now())),
+          expiresIn:duration === 'week' ? new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)) : (duration === 'month'? new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)): new Date(Date.now())),
           isActive:true,
           isConnected:false,
           price:price

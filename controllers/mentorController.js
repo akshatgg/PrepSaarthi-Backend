@@ -14,7 +14,6 @@ const sendMail = require("../utils/sendMail.js");
 const otpSender = require("../utils/otpSender.js");
 //Registering a USER
 exports.uploadMulter = errorCatcherAsync(async (req, res, next) => {
-  console.log("di");
   res.json(req.file);
 });
 
@@ -257,7 +256,6 @@ exports.updatePassword = errorCatcherAsync(async (req, res, next) => {
   }
 
   user.password = req.body.newPassword;
-  console.log("user", isPassword);
   await user.save();
 
   jwtToken(user, 200, res);
