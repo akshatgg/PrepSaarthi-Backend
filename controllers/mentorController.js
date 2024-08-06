@@ -240,6 +240,7 @@ exports.getMentorDetails = errorCatcherAsync(async (req, res, next) => {
       ppdO: user.pricePerDayOld,
       idO: user.idCardOld,
       isUpd: user.updateRequest,
+      coverImg:user.coverImg
     },
   });
 });
