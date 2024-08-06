@@ -80,7 +80,7 @@ exports.buyMentorShipDay = errorCatcherAsync(async (req, res, next) => {
   if (!mentor) {
     return next(new ErrorHandler("No such mentor exists", 400));
   }
-  user.activeAssignedMentors = mentor._id;
+  user.mentorAssigned = true;
   const connection = {
     studentDetails: req.user.id,
     mentorDetails: id,
@@ -258,6 +258,15 @@ exports.loadUserDetails = errorCatcherAsync(async (req, res, next) => {
   if (!user.isActive) {
     return next(new ErrorHandler("No SUch Account Exists", 404));
   }
+  const connection = await Connection.find({studentDetails:req.user._id, isActive:true})
+    if(connection.length > 0){
+      user.mentorAssigned = true;
+      await user.save()
+    }
+    if(connection.length === 0){
+      user.mentorAssigned = false;
+      await user.save()
+    }
   res.status(200).json({
     message: true,
     user,
@@ -295,6 +304,31 @@ exports.updatePassword = errorCatcherAsync(async (req, res, next) => {
 
   jwtToken(user, 200, res);
 });
+
+exports.changeCoverPhotoStu = errorCatcherAsync(async (req, res, next) => {
+  const user = await Student.findById(req.user._id);
+  if (!user) {
+    return next(new ErrorHandler("Invalid Request", 500));
+  }  
+  if (req.body.avatar) {
+    if(user.coverImg.public_URI !== '/images/cover.img'){
+      await cloudinary.v2.uploader.destroy(user.coverImg.public_ID);
+    }
+      const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
+        folder: "covers",
+        width: 1000,
+        crop: "scale",
+      }); 
+      user.coverImg = { public_ID: myCloud.public_id, public_URI: myCloud.secure_url }
+      await user.save({validateBeforeSave:false})  
+      res.status(200).json({
+        success: true,
+      });
+  
+  
+  } 
+});
+
 
 // //  update personal info
 

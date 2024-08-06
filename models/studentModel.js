@@ -18,7 +18,18 @@ const studentSchema = new mongoose.Schema({
     unique: true,
     validate: [validate.isEmail, "Please enter a valid email"],
   },
-
+  coverImg: {
+    public_ID: {
+      type: String,
+      required:[true, "Please specify your public_id"],
+      default:"collegePhoto"
+    },
+    public_URI: {
+      type: String,
+      required:[true, "Please specify your public_uri"],
+      default:"/images/cover.jpg"
+    },
+  },
   verified:{
     type:Boolean,
     default:false,
@@ -60,12 +71,8 @@ const studentSchema = new mongoose.Schema({
  
  
   mentorAssigned: {
-    type: Array,
-    default: [],
-  },
-  activeAssignedMentors: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Student",
+    type: Boolean,
+    default: false
   },
 
   role: {

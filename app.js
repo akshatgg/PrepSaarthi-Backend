@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const mentorRoute = require("./routes/metorRoute");
 const studentRoute = require("./routes/studentRoute");
+const rateLimit = require('express-rate-limit');
 const counter = require("./routes/counter.js");
 const paymentRoute = require("./routes/paymentRoute");
 const bodyParser = require("body-parser");
@@ -15,16 +16,25 @@ app.use(   cors({
     credentials: true,
   origin: allowedOrigin,
 }));
-app.use(cookieParser());
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Credentials", "true");
   next();
 });
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 10, // limit each IP to 100 requests per windowMs
+//   message: 'Too many requests from this IP, please try again after 15 minutes'
+// });
+
+
+// app.use(limiter);
+
+app.use(cookieParser());
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 // app.use(fileUpload({
-//   limits: { fileSize: 10 * 1024 * 1024 },
+//   limits: { fileSize: 10 * 1024 * 1024 }, 
 // }));
 // Route Import
 

@@ -64,7 +64,21 @@ const mentorSchema = new mongoose.Schema({
       default:"/images/profile.png"
     },
   },
-
+  coverImg: {
+    public_ID: {
+      type: String,
+      required:[true, "Please specify your public_id"],
+      default:"collegePhoto"
+    },
+    public_URI: {
+      type: String,
+      required:[true, "Please specify your public_uri"],
+      default:"/images/cover.jpg"
+    },
+  },
+  popUp:{
+    type:Boolean,
+  },
   updateRequest:{
     type:String,
     default:'no'
@@ -181,7 +195,7 @@ const mentorSchema = new mongoose.Schema({
       },
     },
   ],
-
+  
   mentoringStatus:{
    type: String,
    default:"inactive"
@@ -209,6 +223,10 @@ const mentorSchema = new mongoose.Schema({
     default: "user",
   },
 
+  isHeadMentor:{
+    type:Boolean,
+    default:false
+  },
   createdAt: {
     type: Date,
     default: Date.now,

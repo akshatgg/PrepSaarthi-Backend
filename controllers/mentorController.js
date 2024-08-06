@@ -17,6 +17,7 @@ exports.uploadMulter = errorCatcherAsync(async (req, res, next) => {
   res.json(req.file);
 });
 
+
 exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
   const userCheck = await Student.findOne({ email: req.body.email });
   if (userCheck) {
@@ -51,6 +52,31 @@ exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
     });
     jwtToken(user, 201, res);
   }
+});
+
+exports.changeCoverPhoto = errorCatcherAsync(async (req, res, next) => {
+  const user = await Mentor.findById(req.user._id);
+  if (!user) {
+    return next(new ErrorHandler("Invalid Request", 500));
+  }  
+  if (req.body.avatar) {
+    if(user.coverImg.public_URI !== '/images/cover.img'){
+      await cloudinary.v2.uploader.destroy(user.coverImg.public_ID);
+    }
+      const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
+        folder: "covers",
+        width: 1000,
+        crop: "scale",
+      }); 
+      user.coverImg = { public_ID: myCloud.public_id, public_URI: myCloud.secure_url }
+      await user.save({validateBeforeSave:false})
+  
+      res.status(200).json({
+        success: true,
+      });
+  
+  
+  } 
 });
 // USER Login
 
@@ -210,10 +236,10 @@ exports.getMentorDetails = errorCatcherAsync(async (req, res, next) => {
       about: user.about,
       ppm: user.pricePerMonth,
       ppd: user.pricePerDay,
-      ppmO:user.pricePerMonthOld,
-      ppdO:user.pricePerDayOld,
-      idO:user.idCardOld,
-      isUpd:user.updateRequest
+      ppmO: user.pricePerMonthOld,
+      ppdO: user.pricePerDayOld,
+      idO: user.idCardOld,
+      isUpd: user.updateRequest,
     },
   });
 });
@@ -310,6 +336,38 @@ exports.updateMentoringStatus = errorCatcherAsync(async (req, res, next) => {
     success: true,
   });
 });
+//get all mentors for headmentor
+exports.headMentorMentors = errorCatcherAsync(async (req, res, next) => {
+  const allMentors = await Mentor.find({
+    verified: true,
+    role: "mentor",
+    isStepLastCompleted: true,
+    isApproved: "yes",
+    isActive:true,
+  }).select(
+    " -verified -signedUpFor -isStepLastCompleted -mobileNumber -password -updateRequest -isPending -isRejected -isApproved -role -createdAt -linkedin -pricePerMonthOld -pricePerDayOld -isHeadMentor"
+  );
+  // const payload = allMentors.map((mentor) => ({
+  //   name: mentor.name,
+  //   collegeName: mentor.collegeName,
+  //   mentorApplicationStatus: mentor.isStepLastCompleted,
+  //   avatar: mentor.avatar.public_URI,
+  //   collegeImage: mentor.college.public_URI,
+  //   mentoringStatus: mentor.mentoringStatus,
+  //   pricePerMonth: mentor.pricePerMonth,
+  //   pricePerWeek: mentor.pricePerDay,
+  //   description: mentor.desc,
+  //   about: mentor.about,
+  //   rating: mentor.ratings,
+  //   presentYear: mentor.yearOfStudy,
+  //   mentee: mentor.nu,
+  // }));
+
+  res.status(200).json({
+    success: true,
+    allMentors,
+  });
+});
 
 //Update mentor info
 
@@ -397,7 +455,7 @@ exports.updateMentorInfoAfter = errorCatcherAsync(async (req, res, next) => {
       crop: "scale",
     });
 
-    newUserData.idCardOld = 'idcard'
+    newUserData.idCardOld = "idcard";
     newUserData.idCard = {
       public_ID: myCloud.public_id,
       public_URI: myCloud.secure_url,
@@ -497,13 +555,13 @@ exports.getAllAdmin = errorCatcherAsync(async (req, res, next) => {
 
 exports.getAllMentorByStatus = errorCatcherAsync(async (req, res, next) => {
   const usersUpdation = await Mentor.find({
-    updateRequest:'yes',
+    updateRequest: "yes",
     isPending: "yes",
     isApproved: "no",
     isStepLastCompleted: true,
   });
   const usersPending = await Mentor.find({
-    updateRequest:'no',
+    updateRequest: "no",
     isPending: "yes",
     isApproved: "no",
     isStepLastCompleted: true,
@@ -544,7 +602,7 @@ exports.updateRole = errorCatcherAsync(async (req, res, next) => {
       await activityMail({
         message,
       });
-
+      
       return next(
         new ErrorHandler("Super Prevliged Admin can't be updated", 403)
       );
@@ -556,7 +614,7 @@ exports.updateRole = errorCatcherAsync(async (req, res, next) => {
     if (req.user.email !== process.env.PRCTRMAIL)
       return next(new ErrorHandler("You can't change an admin role", 400));
   }
-
+  
   user.role = req.body.role;
   if (req.body.role === "mentor") {
     user.isApproved = "yes";
@@ -570,6 +628,7 @@ exports.updateRole = errorCatcherAsync(async (req, res, next) => {
     user.isRejected = "yes";
   }
   await user.save();
+
 
   res.status(200).json({
     success: true,
@@ -633,12 +692,40 @@ exports.allConnection = errorCatcherAsync(async (req, res, next) => {
       item.isActive = false;
       item.isConnected = false;
       const stu = await Student.findById(item.studentDetails._id);
-      stu.activeAssignedMentors = null;
+      stu.mentorAssigned = false;
       await stu.save({ validateBeforeSave: false });
       await item.save({ validateBeforeSave: false });
     }
   });
   const connectionUpdated = await Connection.find({})
+    .populate("studentDetails", "name avatar")
+    .populate("mentorDetails", "name avatar")
+    .exec();
+
+  res.status(200).json({
+    success: true,
+    connection: connectionUpdated,
+  });
+});
+exports.allConnectionHead = errorCatcherAsync(async (req, res, next) => {
+  // if(!req.user.isHeadMentor){
+  //   return next(new ErrorHandler("Action not allowed", 401));
+  // }
+  const {id} = req.body;
+  const connection = await Connection.find();
+  
+  const currentDate = new Date(Date.now()).getTime();
+  connection.forEach(async (item, i) => {
+    if (item.expiresIn.getTime() < currentDate) {
+      item.isActive = false;
+      item.isConnected = false;
+      const stu = await Student.findById(item.studentDetails._id);
+      stu.mentorAssigned = false;
+      await stu.save({ validateBeforeSave: false });
+      await item.save({ validateBeforeSave: false });
+    }
+  });
+  const connectionUpdated = await Connection.find({mentorDetails:id})
     .populate("studentDetails", "name avatar")
     .populate("mentorDetails", "name avatar")
     .exec();
@@ -664,16 +751,47 @@ exports.removeConnection = errorCatcherAsync(async (req, res, next) => {
   connection.isActive = false;
   connection.isConnected = false;
   const user = await Student.findById(req.body.sid);
-  user.activeAssignedMentors = null;
+  user.mentorAssigned = false;
   await user.save({ validateBeforeSave: false });
   await connection.save({ validateBeforeSave: false });
   res.status(200).json({
     success: true,
   });
 });
+//(admin) grant status
+exports.grantStatus = errorCatcherAsync(async (req, res, next) => {
+  const mentor = await Mentor.findById(req.body.id);
+  mentor.isHeadMentor = req.body.status;
+  if(req.body.status){
+    mentor.popUp = true
+  }else{
+    mentor.popUp = false
+  }
+  await mentor.save({ validateBeforeSave: false });
+  res.status(200).json({
+    success: true,
+    actionApplied:req.body.status
+  });
+});
+exports.popUpControll = errorCatcherAsync(async (req, res, next) => {
+  const mentor = await Mentor.findById(req.user.id);
+  if(!mentor.isHeadMentor){
+    return next(new ErrorHandler("Invalid Request", 401));
+  }
+  if(req.body.popUp){
+    mentor.popUp = false
+    await mentor.save();
+  }
+  res.status(200).json({
+    success: true,
+  });
+});
 
 exports.allMentorConnection = errorCatcherAsync(async (req, res, next) => {
-  const connection = await Connection.find({ mentorDetails: req.user.id });
+  const connection = await Connection.find({ mentorDetails: req.user.id })
+  .populate("studentDetails", "name avatar")
+  .populate("mentorDetails", "name avatar")
+  .exec();;
 
   // connection
   res.status(200).json({
@@ -684,7 +802,15 @@ exports.allMentorConnection = errorCatcherAsync(async (req, res, next) => {
 
 exports.createMentorReview = errorCatcherAsync(async (req, res, next) => {
   const { rating, comment, mentorId } = req.body;
-
+  const connection = await Connection.find({studentDetails:req.user._id, mentorDetails:mentorId})
+  if(connection.length < 1 || !connection){
+    return next(new ErrorHandler("You must enrolled under this mentor to review", 403));
+  }
+  if(connection.length > 0){
+    if(connection[0].isActive === true){
+      return next(new ErrorHandler("You must complete this mentorship to review the mentor", 403));
+    }
+  }
   const review = {
     user: req.user._id,
     name: req.user.name,

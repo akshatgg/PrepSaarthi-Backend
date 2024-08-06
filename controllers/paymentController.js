@@ -91,7 +91,7 @@ exports.paymentVerification = errorCatcherAsync(async (req, res, next) => {
         if(!mentor){
           return next(new ErrorHandler("No such mentor exists", 400));
         }
-        user.activeAssignedMentors = mentor._id;
+        user.mentorAssigned = true;
         const connection = {
           studentDetails:req.user.id,
           mentorDetails:id,
@@ -145,7 +145,7 @@ exports.paymentVerificationSub = errorCatcherAsync(async (req, res, next) => {
         if(!mentor){
           return next(new ErrorHandler("No such mentor exists", 400));
         }
-        user.activeAssignedMentors = mentor._id;
+        user.mentorAssigned = true;
         user.subscription.status = 'active' 
         const connection = {
           studentDetails:req.user.id,
