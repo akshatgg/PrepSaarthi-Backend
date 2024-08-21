@@ -12,16 +12,24 @@ const crypto = require("crypto");
 const cloudinary = require("cloudinary");
 const sendMail = require("../utils/sendMail.js");
 const otpSender = require("../utils/otpSender.js");
+const axios = require("axios");
 //Registering a USER
 exports.uploadMulter = errorCatcherAsync(async (req, res, next) => {
   res.json(req.file);
 });
 
-
 exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
   const userCheck = await Student.findOne({ email: req.body.email });
-  if (userCheck) {
-    return next(new ErrorHandler("Email already exists", 400));
+  const userMob = await Student.findOne({
+    mobileNumber: req.body.mobileNumber,
+  });
+  if (userCheck || userMob) {
+    return next(new ErrorHandler("Account already exists", 400));
+  }
+  
+  const isVerified = await verifyOTP(req,next);
+  if(!isVerified){
+    return next(new ErrorHandler("Incorrect or expired OTP", 400));
   }
   if (req.body.avatar) {
     const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
@@ -37,8 +45,11 @@ exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
       collegeName,
       mobileNumber,
       signedUpFor: "mentor",
+      verified:true,
+      numVerified:true,
       avatar: { public_ID: myCloud.public_id, public_URI: myCloud.secure_url },
     });
+    await OTPGenerate.deleteMany({ email: req.body.email, mobileNumber: req.body.mobileNumber});
     jwtToken(user, 201, res);
   } else {
     const { name, email, password, collegeName, mobileNumber } = req.body;
@@ -47,9 +58,12 @@ exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
       email,
       password,
       collegeName,
+      verified:true,
+      numVerified:true,
       mobileNumber,
       signedUpFor: "mentor",
     });
+    await OTPGenerate.deleteMany({ email: req.body.email, mobileNumber: req.body.mobileNumber});
     jwtToken(user, 201, res);
   }
 });
@@ -58,25 +72,26 @@ exports.changeCoverPhoto = errorCatcherAsync(async (req, res, next) => {
   const user = await Mentor.findById(req.user._id);
   if (!user) {
     return next(new ErrorHandler("Invalid Request", 500));
-  }  
+  }
   if (req.body.avatar) {
-    if(user.coverImg.public_URI !== '/images/cover.img'){
+    if (user.coverImg.public_URI !== "/images/cover.img") {
       await cloudinary.v2.uploader.destroy(user.coverImg.public_ID);
     }
-      const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
-        folder: "covers",
-        width: 1000,
-        crop: "scale",
-      }); 
-      user.coverImg = { public_ID: myCloud.public_id, public_URI: myCloud.secure_url }
-      await user.save({validateBeforeSave:false})
-  
-      res.status(200).json({
-        success: true,
-      });
-  
-  
-  } 
+    const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
+      folder: "covers",
+      width: 1000,
+      crop: "scale",
+    });
+    user.coverImg = {
+      public_ID: myCloud.public_id,
+      public_URI: myCloud.secure_url,
+    };
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+    });
+  }
 });
 // USER Login
 
@@ -240,7 +255,7 @@ exports.getMentorDetails = errorCatcherAsync(async (req, res, next) => {
       ppdO: user.pricePerDayOld,
       idO: user.idCardOld,
       isUpd: user.updateRequest,
-      coverImg:user.coverImg
+      coverImg: user.coverImg,
     },
   });
 });
@@ -344,7 +359,7 @@ exports.headMentorMentors = errorCatcherAsync(async (req, res, next) => {
     role: "mentor",
     isStepLastCompleted: true,
     isApproved: "yes",
-    isActive:true,
+    isActive: true,
   }).select(
     " -verified -signedUpFor -isStepLastCompleted -mobileNumber -password -updateRequest -isPending -isRejected -isApproved -role -createdAt -linkedin -pricePerMonthOld -pricePerDayOld -isHeadMentor"
   );
@@ -511,13 +526,31 @@ exports.getSingleUsers = errorCatcherAsync(async (req, res, next) => {
 // //  Get all Users
 
 exports.getAllMentors = errorCatcherAsync(async (req, res, next) => {
-  const users = await Mentor.find({
-    role: "mentor",
-    mentoringStatus: "active",
-    isActive: true,
-  }).select(
-    "name exam avatar pricePerMonth pricePerDay collegeName branch yearOfStudy ratings createdAt"
-  );
+  // const users = await Mentor.find({
+  //   role: "mentor",
+  //   mentoringStatus: "active",
+  //   isActive: true,
+  // }).select(
+  //   "name exam avatar pricePerMonth pricePerDay collegeName branch yearOfStudy ratings createdAt"
+  // );
+  const users = await Mentor.aggregate([
+    { $match: { role: "mentor", mentoringStatus: "active", isActive: true } },
+    { $sample: { size: await Mentor.countDocuments({ role: "mentor", mentoringStatus: "active", isActive: true }) } }, // Shuffle all documents
+    {
+      $project: {
+        name: 1,
+        exam: 1,
+        avatar: 1,
+        pricePerMonth: 1,
+        pricePerDay: 1,
+        collegeName: 1,
+        branch: 1,
+        yearOfStudy: 1,
+        ratings: 1,
+        createdAt: 1,
+      },
+    },
+  ]);
   res.status(200).json({
     success: true,
     users,
@@ -603,7 +636,7 @@ exports.updateRole = errorCatcherAsync(async (req, res, next) => {
       await activityMail({
         message,
       });
-      
+
       return next(
         new ErrorHandler("Super Prevliged Admin can't be updated", 403)
       );
@@ -628,8 +661,7 @@ exports.updateRole = errorCatcherAsync(async (req, res, next) => {
     user.isPending = "no";
     user.isRejected = "yes";
   }
-  await user.save();
-
+  await user.save({validateBeforeSave:false});
 
   res.status(200).json({
     success: true,
@@ -712,9 +744,9 @@ exports.allConnectionHead = errorCatcherAsync(async (req, res, next) => {
   // if(!req.user.isHeadMentor){
   //   return next(new ErrorHandler("Action not allowed", 401));
   // }
-  const {id} = req.body;
+  const { id } = req.body;
   const connection = await Connection.find();
-  
+
   const currentDate = new Date(Date.now()).getTime();
   connection.forEach(async (item, i) => {
     if (item.expiresIn.getTime() < currentDate) {
@@ -726,7 +758,7 @@ exports.allConnectionHead = errorCatcherAsync(async (req, res, next) => {
       await item.save({ validateBeforeSave: false });
     }
   });
-  const connectionUpdated = await Connection.find({mentorDetails:id})
+  const connectionUpdated = await Connection.find({ mentorDetails: id })
     .populate("studentDetails", "name avatar")
     .populate("mentorDetails", "name avatar")
     .exec();
@@ -763,24 +795,24 @@ exports.removeConnection = errorCatcherAsync(async (req, res, next) => {
 exports.grantStatus = errorCatcherAsync(async (req, res, next) => {
   const mentor = await Mentor.findById(req.body.id);
   mentor.isHeadMentor = req.body.status;
-  if(req.body.status){
-    mentor.popUp = true
-  }else{
-    mentor.popUp = false
+  if (req.body.status) {
+    mentor.popUp = true;
+  } else {
+    mentor.popUp = false;
   }
   await mentor.save({ validateBeforeSave: false });
   res.status(200).json({
     success: true,
-    actionApplied:req.body.status
+    actionApplied: req.body.status,
   });
 });
 exports.popUpControll = errorCatcherAsync(async (req, res, next) => {
   const mentor = await Mentor.findById(req.user.id);
-  if(!mentor.isHeadMentor){
+  if (!mentor.isHeadMentor) {
     return next(new ErrorHandler("Invalid Request", 401));
   }
-  if(req.body.popUp){
-    mentor.popUp = false
+  if (req.body.popUp) {
+    mentor.popUp = false;
     await mentor.save();
   }
   res.status(200).json({
@@ -790,9 +822,9 @@ exports.popUpControll = errorCatcherAsync(async (req, res, next) => {
 
 exports.allMentorConnection = errorCatcherAsync(async (req, res, next) => {
   const connection = await Connection.find({ mentorDetails: req.user.id })
-  .populate("studentDetails", "name avatar")
-  .populate("mentorDetails", "name avatar")
-  .exec();;
+    .populate("studentDetails", "name avatar")
+    .populate("mentorDetails", "name avatar")
+    .exec();
 
   // connection
   res.status(200).json({
@@ -803,14 +835,24 @@ exports.allMentorConnection = errorCatcherAsync(async (req, res, next) => {
 
 exports.createMentorReview = errorCatcherAsync(async (req, res, next) => {
   const { rating, comment, mentorId } = req.body;
-  const connection = await Connection.find({studentDetails:req.user._id, mentorDetails:mentorId})
-  if(connection.length < 1 || !connection){
-    return next(new ErrorHandler("You must enrolled under this mentor to review", 403));
+  const connection = await Connection.find({
+    studentDetails: req.user._id,
+    mentorDetails: mentorId,
+  });
+  if (connection.length < 1 || !connection) {
+    return next(
+      new ErrorHandler("You must enrolled under this mentor to review", 403)
+    );
   }
-  if(connection.length > 0){
-    if(connection[0].isActive === true){
-      return next(new ErrorHandler("You must complete this mentorship to review the mentor", 403));
-    }
+  // if(connection.length > 0){
+  //   if(connection[0].isActive === true){
+  //     return next(new ErrorHandler("You must complete this mentorship to review the mentor", 403));
+  //   }
+  // }
+  if (Number(rating) === 0) {
+    return next(
+      new ErrorHandler("You must give rating to submit a review", 500)
+    );
   }
   const review = {
     user: req.user._id,
@@ -918,34 +960,44 @@ exports.getMentorReviews = errorCatcherAsync(async (req, res, next) => {
 //Generate OTP
 const generateOtp = async (user) => {
   const otp = `${Math.floor(10000 + Math.random() * 90000)}`;
-
+  const mobOtp = `${Math.floor(10000 + Math.random() * 90000)}`;
   //Send Mail
   const saltRound = 10;
 
   const hashedOtp = await bcryptjs.hash(otp, saltRound);
-  const otpExists = await OTPGenerate.findOne({ userId: user._id });
+  const hashedMobOtp = await bcryptjs.hash(mobOtp, saltRound);
+  const otpExists = await OTPGenerate.findOne({
+    email: user.email,
+    mobileNumber: user.mobileNumber,
+  });
 
   if (!otpExists) {
     await OTPGenerate.create({
-      userId: user._id,
+      email: user.email,
+      mobileNumber: user.mobileNumber,
       otp: hashedOtp,
+      mobOtp: hashedMobOtp,
       expiresIn: Date.now() + 10 * 60 * 1000,
     });
   } else {
     otpExists.otp = hashedOtp;
+    otpExists.mobOtp = hashedMobOtp;
     otpExists.expiresIn = Date.now() + 10 * 60 * 1000;
     await otpExists.save();
   }
-  return otp;
+  return {otp, mobOtp};
 };
 
-exports.verifyOTP = errorCatcherAsync(async (req, res, next) => {
-  const { otp } = req.body;
-  if (!otp) {
+// const veriifyOtp = await
+const verifyOTP = async (req,next) => {
+  const  otp = req.body.emailOTP;
+  const mobOtp = req.body.numberOTP;
+  console.log(req.body.email)
+  if (!otp || !mobOtp) {
     return next(new ErrorHandler("Please enter the otp", 400));
   }
 
-  const userOTPVerification = await OTPGenerate.find({ userId: req.user._id });
+  const userOTPVerification = await OTPGenerate.find({ email: req.body.email, mobileNumber: req.body.mobileNumber });
 
   if (userOTPVerification.length <= 0) {
     return next(
@@ -957,42 +1009,55 @@ exports.verifyOTP = errorCatcherAsync(async (req, res, next) => {
   const { expiresIn } = userOTPVerification[0];
 
   const hashedOTP = userOTPVerification[0].otp;
+  const hashedMobOTP = userOTPVerification[0].mobOtp;
 
   if (expiresIn < Date.now()) {
-    await OTPGenerate.deleteMany({ userId: req.user._id });
-    return next(new ErrorHandler("Invalid OTP"));
+    await OTPGenerate.deleteMany({ email: req.body.email });
+    return false;
   }
 
   const validOTP = await bcryptjs.compare(otp, hashedOTP);
+  const validMobOTP = await bcryptjs.compare(mobOtp, hashedMobOTP);
 
-  if (!validOTP) {
-    return next(new ErrorHandler("Inavlid OTP. Please try again"));
+  if (!validOTP || !validMobOTP) {
+    return false;
   }
 
-  await Mentor.updateOne({ _id: req.user._id }, { verified: true });
-  await Student.updateOne({ _id: req.user._id }, { verified: true });
+  // await Mentor.updateOne({ _id: req.user._id }, { verified: true });
+  // await Student.updateOne({ _id: req.user._id }, { verified: true });
 
-  await OTPGenerate.deleteMany({ userId: req.user._id });
 
-  res.status(200).json({
-    status: "success",
-    message: "User verified successfully",
-    role: req.user.role,
-    user: req.user._id,
-  });
-});
+  return true;
+};
 
 exports.resendOTP = errorCatcherAsync(async (req, res, next) => {
-  const user = req.user;
+  const user = req.body;
   const otp = await generateOtp(user);
   try {
+    const url = "https://www.fast2sms.com/dev/bulkV2";
+    const data = {
+      route: "otp",
+      variables_values: otp.mobOtp,
+      numbers: user.mobileNumber,
+    };
+    const headers = {
+      'Authorization': process.env.TEXTSMS,
+      'Content-Type': 'application/json'
+    };
+    await axios.post(url, data, {headers})
     await sendMail({
       email: user.email,
-      subject: `Verification OTP ${otp}`,
-      html: `<p>Your OTP is<p><p><strong>${otp}</strong></p>`,
+      subject: `Verification OTP ${otp.otp}`,
+      html: `<p>Your OTP is<p><p><strong>${otp.otp}</strong></p>`,
     });
+    const otpGenerated = await OTPGenerate.findOne({email: user.email, mobileNumber:user.mobileNumber})
+    otpGenerated.otpCount += 1;
+    console.log('asss')
+    await otpGenerated.save({validateBeforeSave:false})
   } catch (e) {
-    return next(new ErrorHandler(e.message, 500));
+    console.log(e)
+    await OTPGenerate.deleteMany({ email: user.email, mobileNumber:user.mobileNumber });
+    return next(new ErrorHandler(e?.response?.data?.message || e?.message, 500));
   }
   res.status(200).json({
     status: "success",
@@ -1001,16 +1066,49 @@ exports.resendOTP = errorCatcherAsync(async (req, res, next) => {
 });
 
 exports.sendOTP = errorCatcherAsync(async (req, res, next) => {
-  const user = req.user;
+  const isUser = await Mentor.findOne({
+    $or: [
+      { mobileNumber: req.body.mobileNumber },
+      { email: req.body.email }
+    ]
+  })
+  const isUserStu = await Student.findOne({
+    $or: [
+      { mobileNumber: req.body.mobileNumber },
+      { email: req.body.email }
+    ]
+  })
+
+  if(isUser || isUserStu){
+    return next(new ErrorHandler("Account already exists please use different email and mobile number", 500));
+  }
+  const user = req.body;
   const otp = await generateOtp(user);
   try {
+    const url = "https://www.fast2sms.com/dev/bulkV2";
+    const data = {
+      route: "otp",
+      variables_values: otp.mobOtp,
+      numbers: user.mobileNumber,
+    };
+    const headers = {
+      'Authorization': process.env.TEXTSMS,
+      'Content-Type': 'application/json'
+    };
+    await axios.post(url, data, {headers})
     await sendMail({
       email: user.email,
-      subject: `Verification OTP ${otp}`,
-      html: `<p>Your OTP is<p><p><strong>${otp}</strong></p>`,
+      subject: `Verification OTP ${otp.otp}`,
+      html: `<p>Your OTP is<p><p><strong>${otp.otp}</strong></p>`,
     });
+    const otpGenerated = await OTPGenerate.findOne({email: user.email, mobileNumber:user.mobileNumber})
+    otpGenerated.otpCount += 1;
+    console.log('asss')
+    await otpGenerated.save({validateBeforeSave:false})
   } catch (e) {
-    return next(new ErrorHandler(e.message, 500));
+    console.log(e)
+    await OTPGenerate.deleteMany({ email: user.email, mobileNumber:user.mobileNumber });
+    return next(new ErrorHandler(e?.response?.data?.message || e?.message, 500));
   }
   res.status(200).json({
     status: "success",

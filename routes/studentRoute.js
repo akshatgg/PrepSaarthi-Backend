@@ -4,7 +4,7 @@ const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
 const roleAuth = require("../utils/roleAuth");
 
 const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull, changeCoverPhotoStu,} = require("../controllers/studentController");
-const { createMentorReview, getMentorReviews, deleteReview, verifyOTP } = require("../controllers/mentorController");
+const { createMentorReview, getMentorReviews, deleteReview } = require("../controllers/mentorController");
 const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -53,6 +53,6 @@ router
 //   .put(isAuth, roleAuth("admin"), updateRole)
 //   .delete(isAuth, roleAuth("admin"), deleteUser);
 //common routes
-router.route("/student/verify/otp").post(isAuthorizeStu, verifyOTP)
+// router.route("/student/verify/otp").post(isAuthorizeStu, verifyOTP)
 
 module.exports = router;

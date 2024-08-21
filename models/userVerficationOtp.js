@@ -1,11 +1,18 @@
 const mongoose = require("mongoose");
 
 const paymentSchema = new mongoose.Schema({
-  userId: {
+  email: {
     type: String,
+  },
+  mobileNumber:{
+    type:String,
   },
   otp: {
     type: String,
+  },
+  mobOtp:{
+    type: String,
+
   },
   createdAt: {
     type: Date,

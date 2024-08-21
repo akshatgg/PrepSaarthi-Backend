@@ -4,7 +4,7 @@ const isAuthorize = require("../middlewares/isAuthorize");
 const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
 const roleAuth = require("../utils/roleAuth");
 const rateLimit = require('../utils/checkLastOtp')
-const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, verifyOTP, resendOTP, sendOTP, updateMentoringStatus, uploadMulter, headMentorMentors, allConnectionHead, grantStatus, changeCoverPhoto, popUpControll } = require("../controllers/mentorController");
+const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, resendOTP, sendOTP, updateMentoringStatus, uploadMulter, headMentorMentors, allConnectionHead, grantStatus, changeCoverPhoto, popUpControll } = require("../controllers/mentorController");
 const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -57,10 +57,10 @@ router.route("/admin/remove/connections").put(isAuthorize,roleAuth("admin"), rem
 router.route("/admin/update/status").put(isAuthorize,roleAuth("admin"), grantStatus)
 
 // Common Routes
-router.route("/users/verify/otp").post(isAuthorize, verifyOTP)
-router.route("/users/resend/otp").post(isAuthorize , rateLimit, resendOTP)
-router.route("/users/send/otp").post(isAuthorize , rateLimit, sendOTP)
-router.route("/student/verify/otp").post(isAuthorizeStu, verifyOTP)
+// router.route("/users/verify/otp").post(verifyOTP)
+router.route("/users/resend/otp").post(rateLimit, resendOTP)
+router.route("/users/send/otp").post(rateLimit, sendOTP)
+// router.route("/student/verify/otp").post(isAuthorizeStu, verifyOTP)
 router.route("/student/resend/otp").post(isAuthorizeStu , rateLimit, resendOTP)
 router.route("/student/send/otp").post(isAuthorizeStu , rateLimit, sendOTP)
 

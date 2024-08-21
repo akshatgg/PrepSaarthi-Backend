@@ -8,13 +8,23 @@ const Student = require("../models/studentModel.js");
 const Mentor = require("../models/mentorModel");
 const Connection = require("../models/connectionModel.js");
 const cloudinary = require("cloudinary");
+// const OTPGenerate = require("../models/userVerficationOtp.js");
+// const OTPGenerate = require('../models/userVerficationOtp.js')
 const sendMail = require("../utils/sendMail.js");
 //Registering a USER
 
 exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => { 
   const userCheck = await Mentor.findOne({ email: req.body.email });
-  if (userCheck) {
-    return next(new ErrorHandler("Email already exists", 400));
+  const userMob = await Mentor.findOne({
+    mobileNumber: req.body.mobileNumber,
+  });
+  if (userCheck || userMob) {
+    return next(new ErrorHandler("Account already exists", 400));
+  }
+
+  const isVerified = await verifyOTP(req,next);
+  if(!isVerified){
+    return next(new ErrorHandler("Incorrect or expired OTP", 400));
   }
   if (req.body.avatar) {
     const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
@@ -44,6 +54,47 @@ exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
     jwtToken(user, 201, res);
   }
 });
+
+const verifyOTP = async (req,next) => {
+  const  otp = req.body.emailOTP;
+  const mobOtp = req.body.numberOTP;
+  console.log(req.body.email)
+  if (!otp || !mobOtp) {
+    return next(new ErrorHandler("Please enter the otp", 400));
+  }
+
+  const userOTPVerification = await OTPGenerate.find({ email: req.body.email, mobileNumber: req.body.mobileNumber });
+
+  if (userOTPVerification.length <= 0) {
+    return next(
+      new ErrorHandler(
+        "Account doesn't exists or already verified.Please login or signup"
+      )
+    );
+  }
+  const { expiresIn } = userOTPVerification[0];
+
+  const hashedOTP = userOTPVerification[0].otp;
+  const hashedMobOTP = userOTPVerification[0].mobOtp;
+
+  if (expiresIn < Date.now()) {
+    await OTPGenerate.deleteMany({ email: req.body.email });
+    return false;
+  }
+
+  const validOTP = await bcryptjs.compare(otp, hashedOTP);
+  const validMobOTP = await bcryptjs.compare(mobOtp, hashedMobOTP);
+
+  if (!validOTP || !validMobOTP) {
+    return false;
+  }
+
+  // await Mentor.updateOne({ _id: req.user._id }, { verified: true });
+  // await Student.updateOne({ _id: req.user._id }, { verified: true });
+
+
+  return true;
+};
 // USER Login
 
 exports.loginStudent = errorCatcherAsync(async (req, res, next) => {
