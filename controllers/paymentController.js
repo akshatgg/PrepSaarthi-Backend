@@ -6,6 +6,7 @@ const Connection  = require("../models/connectionModel.js");
 const Payment  = require("../models/paymentModel.js");
 const errorCatcherAsync = require("../utils/errorCatcherAsync");
 const ErrorHandler = require("../utils/errorHandeler.js");
+const sendMail = require("../utils/sendMail.js");
 
 exports.checkout = errorCatcherAsync(async (req, res, next) => {
   const amount = req.body.amount * 100
