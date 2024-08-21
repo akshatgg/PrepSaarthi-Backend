@@ -1048,10 +1048,31 @@ exports.resendOTP = errorCatcherAsync(async (req, res, next) => {
 
     console.log('h')
     await axios.post(url, data, {headers})
+    const resendOtpEmailContent = `
+    <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto;">
+      <div style="background-color: #3A5AFF; padding: 20px; border-radius: 10px; text-align: center;">
+        <h2 style="color: #fff; margin: 0;">Here’s Your Resent OTP Code</h2>
+      </div>
+      <div style="padding: 20px; background-color: #f9f9f9; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 1.1em;">
+          We noticed that you requested to resend your OTP code. Please use the code below to continue with your verification process.
+        </p>
+        <div style="text-align: center; margin: 20px 0;">
+          <span style="font-size: 1.5em; font-weight: bold; color: #3A5AFF; padding: 10px 20px; border: 2px dashed #ffc43b; border-radius: 5px;">
+            ${otp.otp}
+          </span>
+        </div>
+        <p style="font-size: 1.1em;">
+          This OTP is valid for the next 10 minutes. If you did not request this, please disregard this message or contact our support team immediately.
+        </p>
+        <p>Best regards,<br><span style="color: #3A5AFF;">The PrepSaarthi Team</span></p>
+      </div>
+    </div>
+  `;
     await sendMail({
       email: user.email,
-      subject: `Verification OTP ${otp.otp}`,
-      html: `<p>Your OTP is<p><p><strong>${otp.otp}</strong></p>`,
+      subject: `Your OTP Code for Verification`,
+      message: resendOtpEmailContent,
     });
     const otpGenerated = await OTPGenerate.findOne({email: user.email, mobileNumber:user.mobileNumber})
     otpGenerated.otpCount += 1;
@@ -1099,10 +1120,31 @@ exports.sendOTP = errorCatcherAsync(async (req, res, next) => {
       'Content-Type': 'application/json'
     };
     await axios.post(url, data, {headers})
+    const otpEmailContent = `
+  <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto;">
+    <div style="background-color: #3A5AFF; padding: 20px; border-radius: 10px; text-align: center;">
+      <h2 style="color: #fff; margin: 0;">Your OTP Code</h2>
+    </div>
+    <div style="padding: 20px; background-color: #f9f9f9; border-radius: 0 0 10px 10px;">
+      <p style="font-size: 1.1em;">
+        We received a request to verify your identity. Please use the OTP code below to complete your process.
+      </p>
+      <div style="text-align: center; margin: 20px 0;">
+        <span style="font-size: 1.5em; font-weight: bold; color: #3A5AFF; padding: 10px 20px; border: 2px dashed #ffc43b; border-radius: 5px;">
+          ${otp.otp}
+        </span>
+      </div>
+      <p style="font-size: 1.1em;">
+        This OTP is valid for the next 10 minutes. If you did not request this, please contact our support team immediately.
+      </p>
+      <p>Best regards,<br><span style="color: #3A5AFF;">The Prepsaarthi Team</span></p>
+    </div>
+  </div>
+`;
     await sendMail({
       email: user.email,
       subject: `Verification OTP ${otp.otp}`,
-      html: `<p>Your OTP is<p><p><strong>${otp.otp}</strong></p>`,
+      message: otpEmailContent,
     });
     const otpGenerated = await OTPGenerate.findOne({email: user.email, mobileNumber:user.mobileNumber})
     otpGenerated.otpCount += 1;
