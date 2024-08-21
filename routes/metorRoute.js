@@ -61,7 +61,7 @@ router.route("/admin/update/status").put(isAuthorize,roleAuth("admin"), grantSta
 router.route("/users/resend/otp").post(rateLimit, resendOTP)
 router.route("/users/send/otp").post(rateLimit, sendOTP)
 // router.route("/student/verify/otp").post(isAuthorizeStu, verifyOTP)
-router.route("/student/resend/otp").post(isAuthorizeStu , rateLimit, resendOTP)
-router.route("/student/send/otp").post(isAuthorizeStu , rateLimit, sendOTP)
+router.route("/student/resend/otp").post(rateLimit, resendOTP)
+router.route("/student/send/otp").post( rateLimit, sendOTP)
 
 module.exports = router;

@@ -35,6 +35,11 @@ const studentSchema = new mongoose.Schema({
     default:false,
     required:true,
   },
+  numVerified:{
+    type:Boolean,
+    default:false,
+    required:true,
+  },
   
   signedUpFor : {
     type:String,

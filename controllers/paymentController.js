@@ -103,6 +103,65 @@ exports.paymentVerification = errorCatcherAsync(async (req, res, next) => {
         await Connection.create(connection);
         await user.save({ validateBeforeSave: false });
     
+        const emailContent = `
+        <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+          <h2 style="color: #3A5AFF;">Purchase Successful!</h2>
+          <p>Dear ${user.name},</p>
+          <p>
+            Congratulations! You have successfully purchased the mentorship program offered by <strong>${mentor.name}</strong>. 
+            The mentor specializes in academics thereby attainng <strong>${mentor.exam.rank}</strong>.
+          </p>
+          <p>
+            Your mentor will reach out to you shortly with further details and to schedule your first session.
+          </p>
+          <p style="color: #555;">
+            <strong>What Happens Next?</strong>
+          </p>
+          <ul style="color: #555; padding-left: 20px;">
+            <li>Your mentor, ${mentor.name}, will contact you soon.</li>
+            <li>You will receive a detailed plan and schedule for your mentorship sessions.</li>
+            <li>If you have any questions, feel free to reach out to us at <a href="mailto:support@example.com" style="color: #ffc43b;">support@example.com</a>.</li>
+          </ul>
+          <p>
+            We are excited for you to begin your journey under the guidance of <strong>${mentor.name}</strong>. 
+            We wish you the best of luck and are confident this mentorship will be valuable for your growth.
+          </p>
+          <p>Best regards,<br><span style="color: #3A5AFF;">The PrepSaarthi Team</span></p>
+        </div>
+      `;
+      const mentorEmailContent = `
+        <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+          <h2 style="color: #3A5AFF;">New Mentorship Purchase!</h2>
+          <p>Dear ${mentor.name},</p>
+          <p>
+            We are pleased to inform you that <strong>${user.name}</strong> has purchased your mentorship program.
+          </p>
+          <p>
+            The student is eager to learn and grow under your guidance. Please connect with them as soon as possible to start planning and scheduling the sessions.
+          </p>
+          <p style="color: #555;">
+            <strong>Student Details:</strong>
+          </p>
+          <ul style="color: #555; padding-left: 20px;">
+            <li><strong>Name:</strong> ${user.name}</li>
+            <li><strong>Duration:</strong> ${duration}</li>
+          </ul>
+          <p>
+            We trust that you will provide excellent mentorship and help the student achieve their goals.
+          </p>
+          <p>Best regards,<br><span style="color: #3A5AFF;">The PrepSaarthi Team</span></p>
+        </div>
+      `;
+              await sendMail({
+                email: user.email,
+                subject: `Successfull purchase for ${mentor.name}'s mentorship`,
+                message: emailContent,
+              });
+              await sendMail({
+                email: mentor.email,
+                subject: `New Student Enrolled For Your Mentorship`,
+                message: mentorEmailContent,
+              });
         res.redirect(
           `http://${process.env.FRONTEND_URL}/payment/success?reference=${razorpay_payment_id}`
         );

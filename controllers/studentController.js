@@ -8,7 +8,8 @@ const Student = require("../models/studentModel.js");
 const Mentor = require("../models/mentorModel");
 const Connection = require("../models/connectionModel.js");
 const cloudinary = require("cloudinary");
-// const OTPGenerate = require("../models/userVerficationOtp.js");
+const bcryptjs = require("bcryptjs");
+const OTPGenerate = require("../models/userVerficationOtp.js");
 // const OTPGenerate = require('../models/userVerficationOtp.js')
 const sendMail = require("../utils/sendMail.js");
 //Registering a USER
@@ -38,6 +39,8 @@ exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
       email,
       password,
       mobileNumber,
+      verified:true,
+      numVerified:true,
       signedUpFor: "student",
       avatar: { public_ID: myCloud.public_id, public_URI: myCloud.secure_url },
     });
@@ -48,9 +51,12 @@ exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
       name,
       email,
       password,
+      verified:true,
+      numVerified:true,
       mobileNumber,
       signedUpFor: "student",
     });
+    await OTPGenerate.deleteMany({ email: req.body.email, mobileNumber: req.body.mobileNumber});
     jwtToken(user, 201, res);
   }
 });

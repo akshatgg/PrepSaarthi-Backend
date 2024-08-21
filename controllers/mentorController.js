@@ -240,6 +240,7 @@ exports.getMentorDetails = errorCatcherAsync(async (req, res, next) => {
       email: user.email,
       avatar: user.avatar,
       exam: user.exam,
+      college:user.collegeName,
       idCard: user.idCard,
       branch: user.branch,
       yearOfStudy: user.yearOfStudy,
@@ -834,7 +835,7 @@ exports.allMentorConnection = errorCatcherAsync(async (req, res, next) => {
 });
 
 exports.createMentorReview = errorCatcherAsync(async (req, res, next) => {
-  const { rating, comment, mentorId } = req.body;
+  const { rating, comment, mentorId } = req.body; 
   const connection = await Connection.find({
     studentDetails: req.user._id,
     mentorDetails: mentorId,
@@ -1044,6 +1045,8 @@ exports.resendOTP = errorCatcherAsync(async (req, res, next) => {
       'Authorization': process.env.TEXTSMS,
       'Content-Type': 'application/json'
     };
+
+    console.log('h')
     await axios.post(url, data, {headers})
     await sendMail({
       email: user.email,
