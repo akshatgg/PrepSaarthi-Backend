@@ -130,7 +130,7 @@ studentSchema.methods.generateResetPasswordToken = function () {
   this.resetPasswordToken = crypto
     .createHash("sha256")
     .update(resetToken)
-    .toString("hex");
+    .digest("hex");
   this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
 
   return resetToken;

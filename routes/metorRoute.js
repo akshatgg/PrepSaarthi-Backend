@@ -4,7 +4,7 @@ const isAuthorize = require("../middlewares/isAuthorize");
 const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
 const roleAuth = require("../utils/roleAuth");
 const rateLimit = require('../utils/checkLastOtp')
-const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, resendOTP, sendOTP, updateMentoringStatus, uploadMulter, headMentorMentors, allConnectionHead, grantStatus, changeCoverPhoto, popUpControll } = require("../controllers/mentorController");
+const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, resendOTP, sendOTP, updateMentoringStatus, uploadMulter, headMentorMentors, allConnectionHead, grantStatus, changeCoverPhoto, popUpControll, isTkid } = require("../controllers/mentorController");
 const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -26,7 +26,7 @@ router.route("/register/mentor").post(upload.single('avatar'),registerMentor);
 router.route("/login").post(loginMentor);
 router.route("/logout").post(logout);
 router.route("/password/forgot").post(forgotPass);
-router.route("/password/reset").put(resetPassord); 
+router.route("/password/reset/:tkid").put(resetPassord); 
 
 router.route("/self").get(isAuthorize, loadUserDetails);
 router.route("/user/info/:id").get(getMentorDetails);
@@ -63,5 +63,6 @@ router.route("/users/send/otp").post(rateLimit, sendOTP)
 // router.route("/student/verify/otp").post(isAuthorizeStu, verifyOTP)
 router.route("/student/resend/otp").post(rateLimit, resendOTP)
 router.route("/student/send/otp").post( rateLimit, sendOTP)
+router.route("/tkid/isexists").post(isTkid)
 
 module.exports = router;

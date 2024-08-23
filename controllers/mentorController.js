@@ -130,6 +130,24 @@ exports.logout = errorCatcherAsync(async (req, res, next) => {
     message: "You are logged Out",
   });
 });
+// check token id exist 
+exports.isTkid = errorCatcherAsync(async (req, res, next) => {
+  const resetPasswordToken = crypto
+  .createHash("sha256")
+  .update(req.body.tkid)
+  .digest("hex");
+  const tkid = await Mentor.findOne({resetPasswordToken,resetPasswordExpire: { $gt: Date.now() },})
+  const tkidStu = await Student.findOne({resetPasswordToken,resetPasswordExpire: { $gt: Date.now() },})
+  if(tkid || tkidStu){
+    res.status(200).json({
+      success: true,
+    });
+  }else{
+    res.status(200).json({
+      success: false,
+    });
+  }
+});
 
 // Forgot Password
 
@@ -143,13 +161,22 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
     }
   }
 
-  const otp = await generateOtp(user || stuUser);
-  const message = resetPasswordMessage(user || stuUser, otp);
+  // const otp = await generateOtp(user || stuUser);
+  const resetToken = user?.generateResetPasswordToken() ||  stuUser?.generateResetPasswordToken();
+  if(user){
+  await user.save({ validateBeforeSave: false });
+  }
+  if(stuUser){
+  await stuUser.save({ validateBeforeSave: false });
+  }
+  const resetPasswordURI = `${process.env.FRONTEND_URL}/forgot/password/${resetToken}`;
+
+  const message = resetPasswordMessage(user || stuUser, resetPasswordURI);
   try {
     await sendMail({
       email: user?.email || stuUser?.email,
-      subject: "PrepSaarthi Password Recovery Support",
-      message,
+      subject: "Password Reset Request",
+      message
     });
 
     res.status(200).json({
@@ -158,6 +185,18 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
       userId: user?._id || stuUser?._id,
     });
   } catch (e) {
+  
+    if(user){
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+    }
+    if(stuUser){
+    stuUser.resetPasswordToken = undefined;
+    stuUser.resetPasswordExpire = undefined;
+    await stuUser.save({ validateBeforeSave: false });
+    }
+
     return next(new ErrorHandler(e.message, 500));
   }
 });
@@ -165,58 +204,56 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
 // //Reset Password
 
 exports.resetPassord = errorCatcherAsync(async (req, res, next) => {
-  const { otp, userId } = req.body;
-  if (!otp) {
-    return next(new ErrorHandler("Please enter the otp", 400));
+  const resetPasswordToken = crypto
+  .createHash("sha256")
+  .update(req.params.tkid)
+  .digest("hex");
+
+  const user = await Student.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+  const menUser = await Mentor.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+
+  if (!user && !menUser) {
+    return next(new ErrorHandler("Invalid or Expired Token", 400));
   }
 
-  const userOTPVerification = await OTPGenerate.find({ userId });
-
-  if (userOTPVerification.length <= 0) {
-    return next(new ErrorHandler("Invalid Request"));
-  }
-  const { expiresIn } = userOTPVerification[0];
-
-  const hashedOTP = userOTPVerification[0].otp;
-
-  if (expiresIn < Date.now()) {
-    await OTPGenerate.deleteMany({ userId });
-    return next(new ErrorHandler("Invalid OTP"));
-  }
-
-  const validOTP = await bcryptjs.compare(otp, hashedOTP);
-
-  if (!validOTP) {
-    return next(new ErrorHandler("Inavlid OTP. Please try again"));
-  }
-
+  
   if (req.body.password !== req.body.confirmPassword) {
     return next(new ErrorHandler("Both the password must match", 400));
   }
-  const user = await Mentor.findOne({ _id: userId });
-  const stuUser = await Student.findOne({ _id: userId });
 
-  if (user) {
-    user.password = req.body.password;
-    await user.save();
+  if(user){
+  user.password = req.body.password;
+
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+  await user.save();
   }
-  if (stuUser) {
-    stuUser.password = req.body.password;
-    await stuUser.save();
+
+  if(menUser){
+    menUser.password = req.body.password;
+
+    menUser.resetPasswordToken = undefined;
+    menUser.resetPasswordExpire = undefined;
+  await menUser.save();
   }
-  if (!user && !stuUser) {
-    return next(new ErrorHandler("No account exists", 404));
-  }
-  const message = passwordchange(user || stuUser);
+
+
+ 
+  const message = passwordchange(user || menUser);
+
   try {
     await sendMail({
-      email: user?.email || stuUser?.email,
+      email: user?.email || menUser?.email,
       subject: "Your password has been changed",
       message,
     });
-
-    await OTPGenerate.deleteMany({ userId });
-    jwtToken(user || stuUser, 200, res);
+    jwtToken(user || menUser, 200, res);
   } catch (e) {
     return next(new ErrorHandler(e.message, 500));
   }
