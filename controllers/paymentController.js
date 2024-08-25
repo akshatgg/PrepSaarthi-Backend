@@ -103,7 +103,7 @@ exports.paymentVerification = errorCatcherAsync(async (req, res, next) => {
         }
         await Connection.create(connection);
         await user.save({ validateBeforeSave: false });
-    
+
         const emailContent = `
         <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
           <h2 style="color: #3A5AFF;">Purchase Successful!</h2>
@@ -121,7 +121,7 @@ exports.paymentVerification = errorCatcherAsync(async (req, res, next) => {
           <ul style="color: #555; padding-left: 20px;">
             <li>Your mentor, ${mentor.name}, will contact you soon.</li>
             <li>You will receive a detailed plan and schedule for your mentorship sessions.</li>
-            <li>If you have any questions, feel free to reach out to us at <a href="mailto:support@example.com" style="color: #ffc43b;">support@example.com</a>.</li>
+            <li>If you have any questions, feel free to reach out to us at <a href="mailto:team@prepsaarthi.com" style="color: #ffc43b;">team@prepsaarthi.com</a>.</li>
           </ul>
           <p>
             We are excited for you to begin your journey under the guidance of <strong>${mentor.name}</strong>. 

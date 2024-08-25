@@ -29,7 +29,7 @@ process.on("uncaughtException", (err) => {
   });
 
 process.on("unhandledRejection", (err) => {
-  console.log(`Error : ${err.message}`);
+  console.log(`Error: ${err.message}`);
   console.log(`Shutting Down The server due to Unhandled Promise Rejection`);
 
   server.close(() => {

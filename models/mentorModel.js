@@ -222,7 +222,10 @@ const mentorSchema = new mongoose.Schema({
     type: Number,
     maxLength: [5, "Price cannot exceed 5 characters"],
   },
-
+  totalActiveMentee:{
+    type:Number,
+    default:0
+  },
   role: {
     type: String,
     default: "user",

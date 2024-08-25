@@ -26,9 +26,9 @@ exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
   if (userCheck || userMob) {
     return next(new ErrorHandler("Account already exists", 400));
   }
-  
-  const isVerified = await verifyOTP(req,next);
-  if(!isVerified){
+
+  const isVerified = await verifyOTP(req, next);
+  if (!isVerified) {
     return next(new ErrorHandler("Incorrect or expired OTP", 400));
   }
   if (req.body.avatar) {
@@ -45,11 +45,14 @@ exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
       collegeName,
       mobileNumber,
       signedUpFor: "mentor",
-      verified:true,
-      numVerified:true,
+      verified: true,
+      numVerified: true,
       avatar: { public_ID: myCloud.public_id, public_URI: myCloud.secure_url },
     });
-    await OTPGenerate.deleteMany({ email: req.body.email, mobileNumber: req.body.mobileNumber});
+    await OTPGenerate.deleteMany({
+      email: req.body.email,
+      mobileNumber: req.body.mobileNumber,
+    });
     jwtToken(user, 201, res);
   } else {
     const { name, email, password, collegeName, mobileNumber } = req.body;
@@ -58,12 +61,15 @@ exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
       email,
       password,
       collegeName,
-      verified:true,
-      numVerified:true,
+      verified: true,
+      numVerified: true,
       mobileNumber,
       signedUpFor: "mentor",
     });
-    await OTPGenerate.deleteMany({ email: req.body.email, mobileNumber: req.body.mobileNumber});
+    await OTPGenerate.deleteMany({
+      email: req.body.email,
+      mobileNumber: req.body.mobileNumber,
+    });
     jwtToken(user, 201, res);
   }
 });
@@ -130,19 +136,25 @@ exports.logout = errorCatcherAsync(async (req, res, next) => {
     message: "You are logged Out",
   });
 });
-// check token id exist 
+// check token id exist
 exports.isTkid = errorCatcherAsync(async (req, res, next) => {
   const resetPasswordToken = crypto
-  .createHash("sha256")
-  .update(req.body.tkid)
-  .digest("hex");
-  const tkid = await Mentor.findOne({resetPasswordToken,resetPasswordExpire: { $gt: Date.now() },})
-  const tkidStu = await Student.findOne({resetPasswordToken,resetPasswordExpire: { $gt: Date.now() },})
-  if(tkid || tkidStu){
+    .createHash("sha256")
+    .update(req.body.tkid)
+    .digest("hex");
+  const tkid = await Mentor.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+  const tkidStu = await Student.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+  if (tkid || tkidStu) {
     res.status(200).json({
       success: true,
     });
-  }else{
+  } else {
     res.status(200).json({
       success: false,
     });
@@ -162,12 +174,13 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
   }
 
   // const otp = await generateOtp(user || stuUser);
-  const resetToken = user?.generateResetPasswordToken() ||  stuUser?.generateResetPasswordToken();
-  if(user){
-  await user.save({ validateBeforeSave: false });
+  const resetToken =
+    user?.generateResetPasswordToken() || stuUser?.generateResetPasswordToken();
+  if (user) {
+    await user.save({ validateBeforeSave: false });
   }
-  if(stuUser){
-  await stuUser.save({ validateBeforeSave: false });
+  if (stuUser) {
+    await stuUser.save({ validateBeforeSave: false });
   }
   const resetPasswordURI = `${process.env.FRONTEND_URL}/forgot/password/${resetToken}`;
 
@@ -176,7 +189,7 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
     await sendMail({
       email: user?.email || stuUser?.email,
       subject: "Password Reset Request",
-      message
+      message,
     });
 
     res.status(200).json({
@@ -185,16 +198,15 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
       userId: user?._id || stuUser?._id,
     });
   } catch (e) {
-  
-    if(user){
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    await user.save({ validateBeforeSave: false });
+    if (user) {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
     }
-    if(stuUser){
-    stuUser.resetPasswordToken = undefined;
-    stuUser.resetPasswordExpire = undefined;
-    await stuUser.save({ validateBeforeSave: false });
+    if (stuUser) {
+      stuUser.resetPasswordToken = undefined;
+      stuUser.resetPasswordExpire = undefined;
+      await stuUser.save({ validateBeforeSave: false });
     }
 
     return next(new ErrorHandler(e.message, 500));
@@ -205,9 +217,9 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
 
 exports.resetPassord = errorCatcherAsync(async (req, res, next) => {
   const resetPasswordToken = crypto
-  .createHash("sha256")
-  .update(req.params.tkid)
-  .digest("hex");
+    .createHash("sha256")
+    .update(req.params.tkid)
+    .digest("hex");
 
   const user = await Student.findOne({
     resetPasswordToken,
@@ -222,29 +234,26 @@ exports.resetPassord = errorCatcherAsync(async (req, res, next) => {
     return next(new ErrorHandler("Invalid or Expired Token", 400));
   }
 
-  
   if (req.body.password !== req.body.confirmPassword) {
     return next(new ErrorHandler("Both the password must match", 400));
   }
 
-  if(user){
-  user.password = req.body.password;
+  if (user) {
+    user.password = req.body.password;
 
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpire = undefined;
-  await user.save();
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
   }
 
-  if(menUser){
+  if (menUser) {
     menUser.password = req.body.password;
 
     menUser.resetPasswordToken = undefined;
     menUser.resetPasswordExpire = undefined;
-  await menUser.save();
+    await menUser.save();
   }
 
-
- 
   const message = passwordchange(user || menUser);
 
   try {
@@ -262,13 +271,24 @@ exports.resetPassord = errorCatcherAsync(async (req, res, next) => {
 // // Get User Detail
 
 exports.getMentorDetails = errorCatcherAsync(async (req, res, next) => {
+  const userInitial = await Mentor.findById(req.params.id);
+  if (!userInitial) {
+    return next(new ErrorHandler("No Such Account Exists", 404));
+  }
+  if (!userInitial.isActive) {
+    return next(new ErrorHandler("No Such Account Exists", 404));
+  }
+
+  const connection = await Connection.find({ mentorDetails: req.params.id });
+  const activeConnection = connection.filter((i) => {
+    if (i.isActive === true) {
+      return i;
+    }
+  });
+  const activeConnectionLength = activeConnection.length;
+  userInitial.totalActiveMentee = activeConnectionLength;
+  await userInitial.save({ validateBeforeSave: false });
   const user = await Mentor.findById(req.params.id);
-  if (!user) {
-    return next(new ErrorHandler("No Such Account Exists", 404));
-  }
-  if (!user.isActive) {
-    return next(new ErrorHandler("No Such Account Exists", 404));
-  }
   res.status(200).json({
     message: true,
     user: {
@@ -277,12 +297,13 @@ exports.getMentorDetails = errorCatcherAsync(async (req, res, next) => {
       email: user.email,
       avatar: user.avatar,
       exam: user.exam,
-      college:user.collegeName,
+      college: user.collegeName,
       idCard: user.idCard,
       branch: user.branch,
       yearOfStudy: user.yearOfStudy,
       ratings: user.ratings,
       reviews: user.reviews,
+      activeMentee: user.totalActiveMentee,
       numberOfrating: user.numOfReviews,
       userAssigned: user.userAssigned,
       desc: user.desc,
@@ -573,10 +594,18 @@ exports.getAllMentors = errorCatcherAsync(async (req, res, next) => {
   // );
   const users = await Mentor.aggregate([
     { $match: { role: "mentor", mentoringStatus: "active", isActive: true } },
-    { $sample: { size: await Mentor.countDocuments({ role: "mentor", mentoringStatus: "active", isActive: true }) } }, // Shuffle all documents
+    {
+      $sample: {
+        size: await Mentor.countDocuments({
+          role: "mentor",
+          mentoringStatus: "active",
+          isActive: true,
+        }),
+      },
+    }, // Shuffle all documents
     {
       $project: {
-        name: 1,
+        name: 1, 
         exam: 1,
         avatar: 1,
         pricePerMonth: 1,
@@ -584,6 +613,7 @@ exports.getAllMentors = errorCatcherAsync(async (req, res, next) => {
         collegeName: 1,
         branch: 1,
         yearOfStudy: 1,
+        totalActiveMentee:1,
         ratings: 1,
         createdAt: 1,
       },
@@ -686,7 +716,7 @@ exports.updateRole = errorCatcherAsync(async (req, res, next) => {
     if (req.user.email !== process.env.PRCTRMAIL)
       return next(new ErrorHandler("You can't change an admin role", 400));
   }
-  
+
   user.role = req.body.role;
   if (req.body.role === "mentor") {
     user.isApproved = "yes";
@@ -699,7 +729,7 @@ exports.updateRole = errorCatcherAsync(async (req, res, next) => {
     user.isPending = "no";
     user.isRejected = "yes";
   }
-  await user.save({validateBeforeSave:false});
+  await user.save({ validateBeforeSave: false });
 
   res.status(200).json({
     success: true,
@@ -763,8 +793,10 @@ exports.allConnection = errorCatcherAsync(async (req, res, next) => {
       item.isActive = false;
       item.isConnected = false;
       const stu = await Student.findById(item.studentDetails._id);
+      if(stu){
       stu.mentorAssigned = false;
       await stu.save({ validateBeforeSave: false });
+      }
       await item.save({ validateBeforeSave: false });
     }
   });
@@ -781,7 +813,7 @@ exports.allConnection = errorCatcherAsync(async (req, res, next) => {
 exports.allConnectionHead = errorCatcherAsync(async (req, res, next) => {
   // if(!req.user.isHeadMentor){
   //   return next(new ErrorHandler("Action not allowed", 401));
-  // }
+  // } 
   const { id } = req.body;
   const connection = await Connection.find();
 
@@ -872,7 +904,7 @@ exports.allMentorConnection = errorCatcherAsync(async (req, res, next) => {
 });
 
 exports.createMentorReview = errorCatcherAsync(async (req, res, next) => {
-  const { rating, comment, mentorId } = req.body; 
+  const { rating, comment, mentorId } = req.body;
   const connection = await Connection.find({
     studentDetails: req.user._id,
     mentorDetails: mentorId,
@@ -1023,19 +1055,22 @@ const generateOtp = async (user) => {
     otpExists.expiresIn = Date.now() + 10 * 60 * 1000;
     await otpExists.save();
   }
-  return {otp, mobOtp};
+  return { otp, mobOtp };
 };
 
 // const veriifyOtp = await
-const verifyOTP = async (req,next) => {
-  const  otp = req.body.emailOTP;
+const verifyOTP = async (req, next) => {
+  const otp = req.body.emailOTP;
   const mobOtp = req.body.numberOTP;
-  console.log(req.body.email)
+  console.log(req.body.email);
   if (!otp || !mobOtp) {
     return next(new ErrorHandler("Please enter the otp", 400));
   }
 
-  const userOTPVerification = await OTPGenerate.find({ email: req.body.email, mobileNumber: req.body.mobileNumber });
+  const userOTPVerification = await OTPGenerate.find({
+    email: req.body.email,
+    mobileNumber: req.body.mobileNumber,
+  });
 
   if (userOTPVerification.length <= 0) {
     return next(
@@ -1064,7 +1099,6 @@ const verifyOTP = async (req,next) => {
   // await Mentor.updateOne({ _id: req.user._id }, { verified: true });
   // await Student.updateOne({ _id: req.user._id }, { verified: true });
 
-
   return true;
 };
 
@@ -1079,12 +1113,12 @@ exports.resendOTP = errorCatcherAsync(async (req, res, next) => {
       numbers: user.mobileNumber,
     };
     const headers = {
-      'Authorization': process.env.TEXTSMS,
-      'Content-Type': 'application/json'
+      Authorization: process.env.TEXTSMS,
+      "Content-Type": "application/json",
     };
 
-    console.log('h')
-    await axios.post(url, data, {headers})
+    console.log("h");
+    await axios.post(url, data, { headers });
     const resendOtpEmailContent = `
     <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto;">
       <div style="background-color: #3A5AFF; padding: 20px; border-radius: 10px; text-align: center;">
@@ -1111,14 +1145,22 @@ exports.resendOTP = errorCatcherAsync(async (req, res, next) => {
       subject: `Your OTP Code for Verification`,
       message: resendOtpEmailContent,
     });
-    const otpGenerated = await OTPGenerate.findOne({email: user.email, mobileNumber:user.mobileNumber})
+    const otpGenerated = await OTPGenerate.findOne({
+      email: user.email,
+      mobileNumber: user.mobileNumber,
+    });
     otpGenerated.otpCount += 1;
-    console.log('asss')
-    await otpGenerated.save({validateBeforeSave:false})
+    console.log("asss");
+    await otpGenerated.save({ validateBeforeSave: false });
   } catch (e) {
-    console.log(e)
-    await OTPGenerate.deleteMany({ email: user.email, mobileNumber:user.mobileNumber });
-    return next(new ErrorHandler(e?.response?.data?.message || e?.message, 500));
+    console.log(e);
+    await OTPGenerate.deleteMany({
+      email: user.email,
+      mobileNumber: user.mobileNumber,
+    });
+    return next(
+      new ErrorHandler(e?.response?.data?.message || e?.message, 500)
+    );
   }
   res.status(200).json({
     status: "success",
@@ -1128,20 +1170,19 @@ exports.resendOTP = errorCatcherAsync(async (req, res, next) => {
 
 exports.sendOTP = errorCatcherAsync(async (req, res, next) => {
   const isUser = await Mentor.findOne({
-    $or: [
-      { mobileNumber: req.body.mobileNumber },
-      { email: req.body.email }
-    ]
-  })
+    $or: [{ mobileNumber: req.body.mobileNumber }, { email: req.body.email }],
+  });
   const isUserStu = await Student.findOne({
-    $or: [
-      { mobileNumber: req.body.mobileNumber },
-      { email: req.body.email }
-    ]
-  })
+    $or: [{ mobileNumber: req.body.mobileNumber }, { email: req.body.email }],
+  });
 
-  if(isUser || isUserStu){
-    return next(new ErrorHandler("Account already exists please use different email and mobile number", 500));
+  if (isUser || isUserStu) {
+    return next(
+      new ErrorHandler(
+        "Account already exists please use different email and mobile number",
+        500
+      )
+    );
   }
   const user = req.body;
   const otp = await generateOtp(user);
@@ -1153,10 +1194,10 @@ exports.sendOTP = errorCatcherAsync(async (req, res, next) => {
       numbers: user.mobileNumber,
     };
     const headers = {
-      'Authorization': process.env.TEXTSMS,
-      'Content-Type': 'application/json'
+      Authorization: process.env.TEXTSMS,
+      "Content-Type": "application/json",
     };
-    await axios.post(url, data, {headers})
+    await axios.post(url, data, { headers });
     const otpEmailContent = `
   <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto;">
     <div style="background-color: #3A5AFF; padding: 20px; border-radius: 10px; text-align: center;">
@@ -1183,17 +1224,41 @@ exports.sendOTP = errorCatcherAsync(async (req, res, next) => {
       subject: `Verification OTP ${otp.otp}`,
       message: otpEmailContent,
     });
-    const otpGenerated = await OTPGenerate.findOne({email: user.email, mobileNumber:user.mobileNumber})
+    const otpGenerated = await OTPGenerate.findOne({
+      email: user.email,
+      mobileNumber: user.mobileNumber,
+    });
     otpGenerated.otpCount += 1;
-    console.log('asss')
-    await otpGenerated.save({validateBeforeSave:false})
+    console.log("asss");
+    await otpGenerated.save({ validateBeforeSave: false });
   } catch (e) {
-    console.log(e)
-    await OTPGenerate.deleteMany({ email: user.email, mobileNumber:user.mobileNumber });
-    return next(new ErrorHandler(e?.response?.data?.message || e?.message, 500));
+    console.log(e);
+    await OTPGenerate.deleteMany({
+      email: user.email,
+      mobileNumber: user.mobileNumber,
+    });
+    return next(
+      new ErrorHandler(e?.response?.data?.message || e?.message, 500)
+    );
   }
   res.status(200).json({
     status: "success",
     message: "OTP sent successfully",
   });
 });
+
+// exports.actieMentee = errorCatcherAsync(async (req, res, next) => {
+//   const connection = await Connection.find({mentorDetails:req.body.id});
+
+// if(activeConnectionLength >= 3){
+//   res.status(200).json({
+//     available: false,
+//   });
+// }else{
+//   res.status(200).json({
+//     available: true,
+//   });
+
+// }
+
+// });
