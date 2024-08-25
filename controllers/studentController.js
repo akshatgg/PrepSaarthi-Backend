@@ -166,8 +166,8 @@ exports.getAllAssignedMentors = errorCatcherAsync(async (req, res, next) => {
 exports.allConnectionSuccessfull = errorCatcherAsync(async (req, res, next) => {
   const connection = await Connection.find({
     mentorDetails: req.params.id,
-    isActive: false,
-    isConnected: false,
+    // isActive: false,
+    // isConnected: false,
   });
 
   // connection
