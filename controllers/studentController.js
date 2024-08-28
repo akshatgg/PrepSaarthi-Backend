@@ -64,7 +64,6 @@ exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
 const verifyOTP = async (req,next) => {
   const  otp = req.body.emailOTP;
   const mobOtp = req.body.numberOTP;
-  console.log(req.body.email)
   if (!otp || !mobOtp) {
     return next(new ErrorHandler("Please enter the otp", 400));
   }

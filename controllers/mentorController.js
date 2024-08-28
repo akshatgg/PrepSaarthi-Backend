@@ -13,6 +13,8 @@ const cloudinary = require("cloudinary");
 const sendMail = require("../utils/sendMail.js");
 const otpSender = require("../utils/otpSender.js");
 const axios = require("axios");
+const { ObjectId } = require('mongoose').Types;
+
 //Registering a USER
 exports.uploadMulter = errorCatcherAsync(async (req, res, next) => {
   res.json(req.file);
@@ -801,10 +803,9 @@ exports.allConnection = errorCatcherAsync(async (req, res, next) => {
     }
   });
   const connectionUpdated = await Connection.find({})
-    .populate("studentDetails", "name avatar")
-    .populate("mentorDetails", "name avatar")
+    .populate("studentDetails", "name avatar mobileNumber email coverImg")
+    .populate("mentorDetails", "name avatar mobileNumber email coverImg collegeName mentoringStatus role exam")
     .exec();
-
   res.status(200).json({
     success: true,
     connection: connectionUpdated,
@@ -1062,7 +1063,6 @@ const generateOtp = async (user) => {
 const verifyOTP = async (req, next) => {
   const otp = req.body.emailOTP;
   const mobOtp = req.body.numberOTP;
-  console.log(req.body.email);
   if (!otp || !mobOtp) {
     return next(new ErrorHandler("Please enter the otp", 400));
   }
@@ -1117,7 +1117,6 @@ exports.resendOTP = errorCatcherAsync(async (req, res, next) => {
       "Content-Type": "application/json",
     };
 
-    console.log("h");
     await axios.post(url, data, { headers });
     const resendOtpEmailContent = `
     <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto;">
@@ -1150,7 +1149,6 @@ exports.resendOTP = errorCatcherAsync(async (req, res, next) => {
       mobileNumber: user.mobileNumber,
     });
     otpGenerated.otpCount += 1;
-    console.log("asss");
     await otpGenerated.save({ validateBeforeSave: false });
   } catch (e) {
     console.log(e);
@@ -1229,7 +1227,6 @@ exports.sendOTP = errorCatcherAsync(async (req, res, next) => {
       mobileNumber: user.mobileNumber,
     });
     otpGenerated.otpCount += 1;
-    console.log("asss");
     await otpGenerated.save({ validateBeforeSave: false });
   } catch (e) {
     console.log(e);
@@ -1262,3 +1259,102 @@ exports.sendOTP = errorCatcherAsync(async (req, res, next) => {
 // }
 
 // });
+
+exports.establishNewConnection = errorCatcherAsync(async (req, res, next) => {
+    if (!ObjectId.isValid(req.body.id)) {
+      return next(new ErrorHandler("Invalid Id", 400));
+    }
+  const student = await Student.findOne({mobileNumber:req.body.mobileNumber})
+  const mentor = await Mentor.findById(req.body.id)
+  if(mentor.totalActiveMentee >= 3){
+    return next(new ErrorHandler("Mentor Already have more than 3 mentee", 400));
+  }
+  let duration = null;
+  
+  if(req.body.duration === 3){
+    duration =   new Date(new Date().setDate(new Date().getDate() + 30))
+  }else if(req.body.duration === 1){
+    duration = new Date(new Date().setDate(new Date().getDate() + 7))
+  }
+  
+  if(!student || !mentor){
+    return next(new ErrorHandler("No records found", 404));
+  }
+  
+  const date = new Date(req.body.date)
+  
+  const connection = {
+    studentDetails:student._id,
+    mentorDetails:mentor._id,
+    expiresIn:duration,
+    isActive:true,
+    isConnected:false,
+    price:req.body.price,
+    boughtAt:date
+  }
+  await Connection.create(connection)
+  
+  const emailContent = `
+  <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+    <h2 style="color: #3A5AFF;">Purchase Successful!</h2>
+    <p>Dear ${student.name},</p>
+    <p>
+      Congratulations! You have successfully purchased the mentorship program offered by <strong>${mentor.name}</strong>. 
+      The mentor specializes in academics thereby attainng <strong>${mentor.exam.rank}</strong>.
+    </p>
+    <p>
+      Your mentor will reach out to you shortly with further details and to schedule your first session.
+    </p>
+    <p style="color: #555;">
+      <strong>What Happens Next?</strong>
+    </p>
+    <ul style="color: #555; padding-left: 20px;">
+      <li>Your mentor, ${mentor.name}, will contact you soon.</li>
+      <li>You will receive a detailed plan and schedule for your mentorship sessions.</li>
+      <li>If you have any questions, feel free to reach out to us at <a href="mailto:team@prepsaarthi.com" style="color: #ffc43b;">team@prepsaarthi.com</a>.</li>
+    </ul>
+    <p>
+      We are excited for you to begin your journey under the guidance of <strong>${mentor.name}</strong>. 
+      We wish you the best of luck and are confident this mentorship will be valuable for your growth.
+    </p>
+    <p>Best regards,<br><span style="color: #3A5AFF;">The PrepSaarthi Team</span></p>
+  </div>
+`;
+const mentorEmailContent = `
+  <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+    <h2 style="color: #3A5AFF;">New Mentorship Purchase!</h2>
+    <p>Dear ${mentor.name},</p>
+    <p>
+      We are pleased to inform you that <strong>${student.name}</strong> has purchased your mentorship program.
+    </p>
+    <p>
+      The student is eager to learn and grow under your guidance. Please connect with them as soon as possible to start planning and scheduling the sessions.
+    </p>
+    <p style="color: #555;">
+      <strong>Student Details:</strong>
+    </p>
+    <ul style="color: #555; padding-left: 20px;">
+      <li><strong>Name:</strong> ${student.name}</li>
+      <li><strong>Duration:</strong> ${req.body.duration} months</li>
+    </ul>
+    <p>
+      We trust that you will provide excellent mentorship and help the student achieve their goals.
+    </p>
+    <p>Best regards,<br><span style="color: #3A5AFF;">The PrepSaarthi Team</span></p>
+  </div>
+`;
+        await sendMail({
+          email: student.email,
+          subject: `Successfull purchase for ${mentor.name}'s mentorship`,
+          message: emailContent,
+        });
+        await sendMail({
+          email: mentor.email,
+          subject: `New Student Enrolled For Your Mentorship`,
+          message: mentorEmailContent,
+        });
+  res.status(200).json({
+    success: true,
+    message: "Connection Established Successfully",
+  });
+});

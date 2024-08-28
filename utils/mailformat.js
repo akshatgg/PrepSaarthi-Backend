@@ -1,5 +1,4 @@
 exports.resetPasswordMessage = (user, URI) => {
-  console.log(URI)
    return(
     `<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto;">
     <div style="background-color: #3A5AFF; padding: 20px; border-radius: 10px; text-align: center;">
