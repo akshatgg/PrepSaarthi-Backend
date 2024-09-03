@@ -168,11 +168,15 @@ exports.allConnectionSuccessfull = errorCatcherAsync(async (req, res, next) => {
     // isActive: false,
     // isConnected: false,
   });
-
+  const uniqueConnections = Array.from(
+    new Map(
+      connection.map((connection) => [connection.studentDetails.toString(), connection])
+    ).values()
+  );
   // connection
   res.status(200).json({
     success: true,
-    count: connection.length,
+    count: uniqueConnections.length,
   });
 });
 //active Mentorship

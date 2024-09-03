@@ -320,6 +320,51 @@ exports.getMentorDetails = errorCatcherAsync(async (req, res, next) => {
     },
   });
 });
+exports.getMentorDetailsAdmin = errorCatcherAsync(async (req, res, next) => {
+  const userInitial = await Mentor.findById(req.params.id);
+  if (!userInitial) {
+    return next(new ErrorHandler("No Such Account Exists", 404));
+  }
+
+  const connection = await Connection.find({ mentorDetails: req.params.id });
+  const activeConnection = connection.filter((i) => {
+    if (i.isActive === true) {
+      return i;
+    }
+  });
+  const activeConnectionLength = activeConnection.length;
+  userInitial.totalActiveMentee = activeConnectionLength;
+  await userInitial.save({ validateBeforeSave: false });
+  const user = await Mentor.findById(req.params.id);
+  res.status(200).json({
+    message: true,
+    user: {
+      name: user.name,
+      id: user._id,
+      email: user.email,
+      avatar: user.avatar,
+      exam: user.exam,
+      college: user.collegeName,
+      idCard: user.idCard,
+      branch: user.branch,
+      yearOfStudy: user.yearOfStudy,
+      ratings: user.ratings,
+      reviews: user.reviews,
+      activeMentee: user.totalActiveMentee,
+      numberOfrating: user.numOfReviews,
+      userAssigned: user.userAssigned,
+      desc: user.desc,
+      about: user.about,
+      ppm: user.pricePerMonth,
+      ppd: user.pricePerDay,
+      ppmO: user.pricePerMonthOld,
+      ppdO: user.pricePerDayOld,
+      idO: user.idCardOld,
+      isUpd: user.updateRequest,
+      coverImg: user.coverImg,
+    },
+  });
+});
 // // Get User Detail
 
 exports.loadUserDetails = errorCatcherAsync(async (req, res, next) => {
@@ -824,8 +869,10 @@ exports.allConnectionHead = errorCatcherAsync(async (req, res, next) => {
       item.isActive = false;
       item.isConnected = false;
       const stu = await Student.findById(item.studentDetails._id);
-      stu.mentorAssigned = false;
-      await stu.save({ validateBeforeSave: false });
+      if(stu){
+        stu.mentorAssigned = false;
+        await stu.save({ validateBeforeSave: false });
+        }
       await item.save({ validateBeforeSave: false });
     }
   });
@@ -838,6 +885,34 @@ exports.allConnectionHead = errorCatcherAsync(async (req, res, next) => {
     success: true,
     connection: connectionUpdated,
   });
+});
+exports.allConnectionMentor = errorCatcherAsync(async (req, res, next) => {
+
+  const connection = await Connection.find();
+
+  const currentDate = new Date(Date.now()).getTime();
+  connection.forEach(async (item, i) => {
+    if (item.expiresIn.getTime() < currentDate) {
+      item.isActive = false;
+      item.isConnected = false;
+      const stu = await Student.findById(item.studentDetails._id);
+      if(stu){
+      stu.mentorAssigned = false;
+      await stu.save({ validateBeforeSave: false });
+      }
+      await item.save({ validateBeforeSave: false });
+    }
+  });
+  const connectionUpdated = await Connection.find({ mentorDetails: req.user.id })
+    .populate("studentDetails", "name")
+    .populate("mentorDetails", "name avatar")
+
+    .exec();
+
+  res.status(200).json({
+    success: true,
+    connection: connectionUpdated,
+  }); 
 });
 //(admin) interpert connection
 exports.assignConnection = errorCatcherAsync(async (req, res, next) => {
@@ -972,7 +1047,7 @@ exports.deleteReview = errorCatcherAsync(async (req, res, next) => {
     return next(new ErrorHandler("Mentor not found", 404));
   }
   const reviews = mentor.reviews.filter(
-    (rev) => rev._id.toString() !== req.query.id.toString()
+    (rev) => rev._id.toString() !== req.query.id.toString() 
   );
   let avg = 0;
 

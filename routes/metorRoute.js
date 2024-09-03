@@ -4,7 +4,7 @@ const isAuthorize = require("../middlewares/isAuthorize");
 const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
 const roleAuth = require("../utils/roleAuth");
 const rateLimit = require('../utils/checkLastOtp')
-const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, resendOTP, sendOTP, updateMentoringStatus, uploadMulter, headMentorMentors, allConnectionHead, grantStatus, changeCoverPhoto, popUpControll, isTkid, establishNewConnection } = require("../controllers/mentorController");
+const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, resendOTP, sendOTP, updateMentoringStatus, uploadMulter, headMentorMentors, allConnectionHead, grantStatus, changeCoverPhoto, popUpControll, isTkid, establishNewConnection, getMentorDetailsAdmin, allConnectionMentor } = require("../controllers/mentorController");
 const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -30,6 +30,7 @@ router.route("/password/reset/:tkid").put(resetPassord);
 
 router.route("/self").get(isAuthorize, loadUserDetails);
 router.route("/user/info/:id").get(getMentorDetails);
+router.route("/admin/user/info/:id").get(getMentorDetailsAdmin);
 router.route("/self/update/password").put(isAuthorize, updatePassword);
 router.route("/self/update/profile").put(isAuthorize, upload.single('avatar'), updateProfile);
 router.route("/self/update/profile/info").put(isAuthorize,upload.single('avatar'), updateMentorInfo);
@@ -49,6 +50,7 @@ router.route("/admin/user/delete/:id").delete(isAuthorize,roleAuth("admin"), del
 router.route("/admin/add/connection").post(isAuthorize,roleAuth("admin"), establishNewConnection)
 router.route("/admin/all/connection/").get(isAuthorize,roleAuth("admin"), allConnection)
 router.route("/head/all/connection/").post(isAuthorize,roleAuth("mentor"), allConnectionHead) 
+router.route("/mentor/all/connection/").get(isAuthorize,roleAuth("mentor"), allConnectionMentor) 
 router.route("/mentor/all/connection/").get(isAuthorize,roleAuth("mentor"), allMentorConnection)
 router.route("/mentor/update/status").put(isAuthorize,roleAuth("mentor"), updateMentoringStatus)
 router.route("/mentor/update/popup").put(isAuthorize,roleAuth("mentor"), popUpControll)
