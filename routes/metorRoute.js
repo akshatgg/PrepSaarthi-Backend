@@ -4,7 +4,7 @@ const isAuthorize = require("../middlewares/isAuthorize");
 const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
 const roleAuth = require("../utils/roleAuth");
 const rateLimit = require('../utils/checkLastOtp')
-const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, resendOTP, sendOTP, updateMentoringStatus, uploadMulter, headMentorMentors, allConnectionHead, grantStatus, changeCoverPhoto, popUpControll, isTkid, establishNewConnection, getMentorDetailsAdmin, allConnectionMentor } = require("../controllers/mentorController");
+const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, resendOTP, sendOTP, updateMentoringStatus, uploadMulter, headMentorMentors, allConnectionHead, grantStatus, changeCoverPhoto, popUpControll, isTkid, establishNewConnection, getMentorDetailsAdmin, allConnectionMentor, getMentorDetailsByMob, getConnectionByMob, getMentorByMob, swapConnection } = require("../controllers/mentorController");
 const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -45,6 +45,9 @@ router.route("/admin/users/request").get(isAuthorize,roleAuth("admin"), getAllMe
 router.route("/admin/users/:id").put(isAuthorize,roleAuth("admin"), updateRole)
 router.route("/admin/students/all").get(isAuthorize,roleAuth("admin"), getAllStudents)
 router.route("/admin/mentors/all").get(isAuthorize,roleAuth("admin"), getAllMentorsAdmin)
+router.route("/admin/mentors/find/conn").post(isAuthorize,roleAuth("admin"), getConnectionByMob)
+router.route("/admin/mentors/find/mob").post(isAuthorize,roleAuth("admin"), getMentorByMob)
+router.route("/admin/mentors/swap/connection").post(isAuthorize,roleAuth("admin"), swapConnection)
 router.route("/admins/all").get(isAuthorize,roleAuth("admin"), getAllAdmin)
 router.route("/admin/user/delete/:id").delete(isAuthorize,roleAuth("admin"), deleteUser)
 router.route("/admin/add/connection").post(isAuthorize,roleAuth("admin"), establishNewConnection)

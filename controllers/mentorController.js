@@ -8,6 +8,7 @@ const Connection = require("../models/connectionModel.js");
 const jwtToken = require("../utils/jwtToken");
 const { resetPasswordMessage } = require("../utils/mailformat.js");
 const { passwordchange } = require("../utils/passwordchange.js");
+const mongoose = require('mongoose');
 const crypto = require("crypto");
 const cloudinary = require("cloudinary");
 const sendMail = require("../utils/sendMail.js");
@@ -913,6 +914,47 @@ exports.allConnectionMentor = errorCatcherAsync(async (req, res, next) => {
     success: true,
     connection: connectionUpdated,
   }); 
+});
+exports.getConnectionByMob = errorCatcherAsync(async (req, res, next) => {
+  const student = await Student.findOne({mobileNumber:req.body.mobileNumber}).select("_id name");
+  if(!student){
+    return next(new ErrorHandler("No student found with given phone number", 404));
+  }
+  const activeConnection = await Connection.find({studentDetails:student._id, isActive:true}).select('mentorDetails boughtAt expiresIn')
+  .populate("mentorDetails", "name mobileNumber avatar")
+  res.status(200).json({
+    activeConnection,
+    name:student.name,
+    stuId:student._id
+  })
+});
+exports.getMentorByMob = errorCatcherAsync(async (req, res, next) => {
+  const mentor = await Mentor.findOne({mobileNumber:req.body.mobileNumber}).select("name _id");
+  if(!mentor){
+    return next(new ErrorHandler("No mentor found with given phone number", 404));
+  }
+  res.status(200).json({
+    mentor
+  })
+});
+
+exports.swapConnection = errorCatcherAsync(async (req, res, next) => {
+  const connection = await Connection.findById(req.body.id)
+  if(!connection){
+    return next(new ErrorHandler("No connection found", 404));
+  }
+  const mentor = await Mentor.findById(req.body.mentorId);
+  if(!mentor){
+    return next(new ErrorHandler("No such Mentor found", 404))
+  }
+  if (mentor._id.equals(connection.mentorDetails)) {
+    return next(new ErrorHandler("Can't swap connection with same mentor"))
+  }
+  connection.mentorDetails = mentor._id;
+  await connection.save({validateBeforeSave:false})
+  res.status(200).json({
+    success:true
+  })
 });
 //(admin) interpert connection
 exports.assignConnection = errorCatcherAsync(async (req, res, next) => {
