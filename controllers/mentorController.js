@@ -1,8 +1,8 @@
 const ErrorHandler = require("../utils/errorHandeler");
 const errorCatcherAsync = require("../utils/errorCatcherAsync");
 const Mentor = require("../models/mentorModel");
-const bcryptjs = require("bcryptjs");
 const Student = require("../models/studentModel.js");
+const bcryptjs = require("bcryptjs");
 const OTPGenerate = require("../models/userVerficationOtp.js");
 const Connection = require("../models/connectionModel.js");
 const jwtToken = require("../utils/jwtToken");
@@ -96,7 +96,6 @@ exports.changeCoverPhoto = errorCatcherAsync(async (req, res, next) => {
       public_URI: myCloud.secure_url,
     };
     await user.save({ validateBeforeSave: false });
-
     res.status(200).json({
       success: true,
     });
@@ -863,7 +862,7 @@ exports.allConnectionHead = errorCatcherAsync(async (req, res, next) => {
   // } 
   const { id } = req.body;
   const connection = await Connection.find();
-
+  
   const currentDate = new Date(Date.now()).getTime();
   connection.forEach(async (item, i) => {
     if (item.expiresIn.getTime() < currentDate) {

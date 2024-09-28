@@ -6,6 +6,7 @@ const roleAuth = require("../utils/roleAuth");
 const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull, changeCoverPhotoStu,} = require("../controllers/studentController");
 const { createMentorReview, getMentorReviews, deleteReview } = require("../controllers/mentorController");
 const multer = require("multer");
+const { retriveChat, notificationFetch } = require("../chatService/chatController");
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
@@ -28,11 +29,13 @@ router.route("/student/password/reset/:tkid").put(resetPassord);
 
 router.route("/student/self").get(isAuthorizeStu, loadUserDetails);
 router.route("/student/user/info/:id").get(getStudentDetails);
+router.route("/student/all/chats/").get(isAuthorizeStu, retriveChat)
+router.route("/student/all/notification/").post(isAuthorizeStu, notificationFetch)
 router.route("/student/get/successcon/:id").get(allConnectionSuccessfull);
 router.route("/student/self/update/password").put(isAuthorizeStu, updatePassword);
 router.route("/student/self/update/profile").put(isAuthorizeStu,upload.single('avatar') , updateStudentProfile);
 router.route("/student/buy/mentorship/week").post(isAuthorizeStu, buyMentorShipDay);
-router.route("/student/past/mentorship").get(isAuthorizeStu, getAllAssignedMentors);
+router.route("/student/past/mentorship").get(isAuthorizeStu, getAllAssignedMentors); //this
 router.route("/student/active/mentorship").get(isAuthorizeStu, getActiveMentorship);
 router.route("/stu/update/cover").put(isAuthorizeStu, upload.single('avatar'),changeCoverPhotoStu)
 

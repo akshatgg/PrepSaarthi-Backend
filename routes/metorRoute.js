@@ -6,6 +6,7 @@ const roleAuth = require("../utils/roleAuth");
 const rateLimit = require('../utils/checkLastOtp')
 const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, resendOTP, sendOTP, updateMentoringStatus, uploadMulter, headMentorMentors, allConnectionHead, grantStatus, changeCoverPhoto, popUpControll, isTkid, establishNewConnection, getMentorDetailsAdmin, allConnectionMentor, getMentorDetailsByMob, getConnectionByMob, getMentorByMob, swapConnection } = require("../controllers/mentorController");
 const multer = require("multer");
+const { retriveChat, notificationFetch } = require("../chatService/chatController");
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
@@ -55,6 +56,8 @@ router.route("/admin/all/connection/").get(isAuthorize,roleAuth("admin"), allCon
 router.route("/head/all/connection/").post(isAuthorize,roleAuth("mentor"), allConnectionHead) 
 router.route("/mentor/all/connection/").get(isAuthorize,roleAuth("mentor"), allConnectionMentor) 
 router.route("/mentor/all/connection/").get(isAuthorize,roleAuth("mentor"), allMentorConnection)
+router.route("/mentor/all/chats/").get(isAuthorize, retriveChat)
+router.route("/mentor/all/notification/").post(isAuthorize, notificationFetch)
 router.route("/mentor/update/status").put(isAuthorize,roleAuth("mentor"), updateMentoringStatus)
 router.route("/mentor/update/popup").put(isAuthorize,roleAuth("mentor"), popUpControll)
 router.route("/mentor/head/allmentors").get(isAuthorize,roleAuth("mentor"), headMentorMentors)
