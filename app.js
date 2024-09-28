@@ -1,7 +1,7 @@
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const express = require("express");
-const allowedOrigin = "http://localhost:3000";
+const allowedOrigin = [process.env.ALLOWEDORIGIN1,process.env.ALLOWEDORIGIN2];
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
