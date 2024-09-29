@@ -8,7 +8,6 @@ const rateLimit = errorCatcherAsync(async (req, res, next) => {
     const diff = currentTimestamp - userForOTP?.rateLimiter;
     const hours24 = 24 * 60 * 60 * 1000;
     
-    console.log(req.body.email, userForOTP,(diff >= hours24), (userForOTP.otpCount < 5 ),(diff >= hours24 || userForOTP.otpCount < 5 )) 
     if (diff >= hours24 || userForOTP.otpCount < 5 ) {
       userForOTP.rateLimiter = currentTimestamp; 
       await userForOTP.save({validateBeforeSave: false})

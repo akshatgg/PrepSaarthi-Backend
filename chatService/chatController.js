@@ -54,6 +54,9 @@ const detectNumberSharing = (message) => {
 exports.chatService = errorCatcherAsync(
   async ({io, socket, openedChat, connectedUsers, onlineUsers}, res, next ) => {
     
+    socket.on('temp-chat',(temp) => {
+      socket.emit('hide-footer',temp)
+    })
     socket.on('main-s',(userId) => {
       onlineUsers.set(userId, socket.id)
     })
@@ -106,7 +109,6 @@ exports.chatService = errorCatcherAsync(
               },
             }));
             
-            await Notification.deleteMany({unseenFor:loged})
 
             const result = await Message.bulkWrite(bulkOps);
             const onlineUsers = idsToSend
@@ -127,6 +129,7 @@ exports.chatService = errorCatcherAsync(
         socket.emit("chat-retrival", { message: [], chatId: null });
       } else {
         await Notification.updateOne({ chatId: chat._id, unseenFor: loged },{$set:{chatUnread:0, notificationUnseen:0}});
+        await Notification.deleteMany({chatUnread:0, notificationUnseen:0,unseenFor:loged})
         socket.emit("chat-retrival", {
           message: await Message.find({ chatId: chat._id }).sort({
             timeStamp: 1,
@@ -150,7 +153,6 @@ exports.chatService = errorCatcherAsync(
           if(role === 'mentor'){
             const mentor = await Mentor.findByIdAndUpdate(senderId, {$set:{mentoringStatus:'inactive'}})
             const student = await Student.findById(userId)
-            console.log(mentor)
 const toAdmin = `<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto;">
     <div style="background-color: #FF6F61; padding: 20px; border-radius: 10px; text-align: center;">
         <h2 style="color: #fff; margin: 0;">Account Suspension Notification</h2>
@@ -390,9 +392,7 @@ await sendMail({
               await notificationUser.save();
             }
             if(!reciverId && isOnline){
-              console.log('dd')
               const online = onlineUsers.get(userId)
-              console.log(notificationUser)
               io.to(online).emit('send-not', ({notificationUser}))
             }
           } catch (e) {
@@ -411,7 +411,6 @@ await sendMail({
               age: "new",
             });
           }
-          console.log('111')
           socket.emit("recive-message", {message,name:userExists.name, avatar:userExists.avatar,status:reciverId ? 'online':'offline' ,age: "old", chatLeft:chat.chatLeft});
         } else {
           if(role === 'student'){
@@ -481,7 +480,6 @@ await sendMail({
             }
             if(!reciverId && isOnline){
               const online = onlineUsers.get(userId)
-              console.log('kd')
               io.to(online).emit('send-not', ({notificationUser}))
             }
           } catch (e) {
@@ -495,7 +493,6 @@ await sendMail({
               message.seenAt = new Date();
             }
             await message.save();
-            console.log('111122')
 
             io.to(reciverId).emit("recive-message", {
               message: { ...message._doc, isHighlighted:isOpenChat ? false : true },
@@ -508,6 +505,14 @@ await sendMail({
     );
     socket.on("disconnect", () => {
       try {
+        for (let [loged, socketsId] of onlineUsers.entries()) {
+          if (socket.id === socketsId) {
+            onlineUsers.delete(loged);
+            // io.emit("mystatus", { userId: loged, status: "offline" });
+            console.log(`${loged} deleted`);
+            break;
+          }
+        }
         for (let [loged, socketsId] of connectedUsers.entries()) {
           if (socket.id === socketsId) {
             connectedUsers.delete(loged);
@@ -518,7 +523,6 @@ await sendMail({
           }
         }
       } catch (e) {
-        console.log(e);
       }
     });
   }
