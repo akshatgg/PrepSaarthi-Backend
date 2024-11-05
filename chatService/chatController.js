@@ -54,6 +54,9 @@ const detectNumberSharing = (message) => {
 exports.chatService = errorCatcherAsync(
   async ({io, socket, openedChat, connectedUsers, onlineUsers}, res, next ) => {
     
+    socket.on('senddd',(temp) => {
+      console.log(temp,'daad')
+    })
     socket.on('temp-chat',(temp) => {
       socket.emit('hide-footer',temp)
     })

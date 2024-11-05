@@ -3,7 +3,7 @@ const express = require("express");
 const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
 const roleAuth = require("../utils/roleAuth");
 
-const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull, changeCoverPhotoStu,} = require("../controllers/studentController");
+const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull, changeCoverPhotoStu, updateTracker, getSyllabusTracker,} = require("../controllers/studentController");
 const { createMentorReview, getMentorReviews, deleteReview } = require("../controllers/mentorController");
 const multer = require("multer");
 const { retriveChat, notificationFetch } = require("../chatService/chatController");
@@ -37,6 +37,8 @@ router.route("/student/self/update/profile").put(isAuthorizeStu,upload.single('a
 router.route("/student/buy/mentorship/week").post(isAuthorizeStu, buyMentorShipDay);
 router.route("/student/past/mentorship").get(isAuthorizeStu, getAllAssignedMentors); //this
 router.route("/student/active/mentorship").get(isAuthorizeStu, getActiveMentorship);
+router.route("/student/get/tracker").post(isAuthorizeStu,getSyllabusTracker);
+router.route("/student/update/tracker").put(isAuthorizeStu, updateTracker);
 router.route("/stu/update/cover").put(isAuthorizeStu, upload.single('avatar'),changeCoverPhotoStu)
 
 // router.route("/student/user/info/:id").get(getSingleUsers);
