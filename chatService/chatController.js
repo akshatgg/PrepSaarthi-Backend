@@ -54,6 +54,9 @@ const detectNumberSharing = (message) => {
 exports.chatService = errorCatcherAsync(
   async ({io, socket, openedChat, connectedUsers, onlineUsers}, res, next ) => {
     
+    socket.on('senddd',(temp) => {
+      console.log(temp,'daad')
+    })
     socket.on('temp-chat',(temp) => {
       socket.emit('hide-footer',temp)
     })
@@ -424,7 +427,6 @@ await sendMail({
           }
           if(role === 'mentor'){
             const isSubscribed = await Connection.findOne({studentDetails:userId, mentorDetails:senderId, isActive:true})
-            console.log(chat.chatLeft)
             if(!isSubscribed){
               if(chat.chatLeft <= 0){
                 socket.emit('errors',({errorType:'message-limit',message:'You currently dont have active connection with this mentee', }))

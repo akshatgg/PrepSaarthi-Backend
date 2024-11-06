@@ -6,6 +6,7 @@ const { resetPasswordMessage } = require("../utils/mailformat.js");
 const crypto = require("crypto");
 const Student = require("../models/studentModel.js");
 const Mentor = require("../models/mentorModel");
+const SyllabusProgress = require("../models/syllabusModel.js");
 const Connection = require("../models/connectionModel.js");
 const cloudinary = require("cloudinary");
 const bcryptjs = require("bcryptjs");
@@ -14,7 +15,7 @@ const OTPGenerate = require("../models/userVerficationOtp.js");
 const sendMail = require("../utils/sendMail.js");
 //Registering a USER
 
-exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => { 
+exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
   const userCheck = await Mentor.findOne({ email: req.body.email });
   const userMob = await Mentor.findOne({
     mobileNumber: req.body.mobileNumber,
@@ -23,8 +24,8 @@ exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
     return next(new ErrorHandler("Account already exists", 400));
   }
 
-  const isVerified = await verifyOTP(req,next);
-  if(!isVerified){
+  const isVerified = await verifyOTP(req, next);
+  if (!isVerified) {
     return next(new ErrorHandler("Incorrect or expired OTP", 400));
   }
   if (req.body.avatar) {
@@ -39,8 +40,8 @@ exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
       email,
       password,
       mobileNumber,
-      verified:true,
-      numVerified:true,
+      verified: true,
+      numVerified: true,
       signedUpFor: "student",
       avatar: { public_ID: myCloud.public_id, public_URI: myCloud.secure_url },
     });
@@ -51,24 +52,30 @@ exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
       name,
       email,
       password,
-      verified:true,
-      numVerified:true,
+      verified: true,
+      numVerified: true,
       mobileNumber,
       signedUpFor: "student",
     });
-    await OTPGenerate.deleteMany({ email: req.body.email, mobileNumber: req.body.mobileNumber});
+    await OTPGenerate.deleteMany({
+      email: req.body.email,
+      mobileNumber: req.body.mobileNumber,
+    });
     jwtToken(user, 201, res);
   }
 });
 
-const verifyOTP = async (req,next) => {
-  const  otp = req.body.emailOTP;
+const verifyOTP = async (req, next) => {
+  const otp = req.body.emailOTP;
   const mobOtp = req.body.numberOTP;
   if (!otp || !mobOtp) {
     return next(new ErrorHandler("Please enter the otp", 400));
   }
 
-  const userOTPVerification = await OTPGenerate.find({ email: req.body.email, mobileNumber: req.body.mobileNumber });
+  const userOTPVerification = await OTPGenerate.find({
+    email: req.body.email,
+    mobileNumber: req.body.mobileNumber,
+  });
 
   if (userOTPVerification.length <= 0) {
     return next(
@@ -96,7 +103,6 @@ const verifyOTP = async (req,next) => {
 
   // await Mentor.updateOne({ _id: req.user._id }, { verified: true });
   // await Student.updateOne({ _id: req.user._id }, { verified: true });
-
 
   return true;
 };
@@ -170,7 +176,10 @@ exports.allConnectionSuccessfull = errorCatcherAsync(async (req, res, next) => {
   });
   const uniqueConnections = Array.from(
     new Map(
-      connection.map((connection) => [connection.studentDetails.toString(), connection])
+      connection.map((connection) => [
+        connection.studentDetails.toString(),
+        connection,
+      ])
     ).values()
   );
   // connection
@@ -318,18 +327,60 @@ exports.loadUserDetails = errorCatcherAsync(async (req, res, next) => {
   if (!user.isActive) {
     return next(new ErrorHandler("No SUch Account Exists", 404));
   }
-  const connection = await Connection.find({studentDetails:req.user._id, isActive:true})
-    if(connection.length > 0){
-      user.mentorAssigned = true;
-      await user.save()
-    }
-    if(connection.length === 0){
-      user.mentorAssigned = false;
-      await user.save()
-    }
+
+  const connection = await Connection.find({
+    studentDetails: req.user._id,
+    isActive: true,
+  });
+  if (connection.length > 0) {
+    user.mentorAssigned = true;
+    await user.save();
+  }
+  if (connection.length === 0) {
+    user.mentorAssigned = false;
+    await user.save();
+  }
+  const syllabusTracker = await SyllabusProgress.find({studentId:req.user.id})
+  let chemistryTotalOb = 0;
+  let chemistryTotal = 0;
+  let physicsTotalOb = 0;
+  let physicsTotal = 0;
+  let mathsTotalOb = 0;
+  let mathsTotal = 0;
+  let chem11 = 0;
+  let chem12 = 0;
+  let phys11 = 0;
+  let phys12 = 0;
+  let maths11 = 0;
+  let maths12 = 0;
+  syllabusTracker.forEach((i) => {
+    chem11 += i.chemistry11;
+    chem12 += i.chemistry12;
+    phys11 += i.physics11;
+    phys12 += i.physics12;
+    maths11 += i.maths;
+    maths12 += i.maths12;
+  })
+  chemistryTotalOb = Math.round(((chem11*91)+(chem12*84))/175)
+  physicsTotalOb = Math.round(((phys11*126) + (phys12*84))/210);
+  mathsTotalOb = Math.round(((maths11*91) + (maths12*105))/196);
+  const total = Math.round((((chem11*91)+(chem12*84) + (phys11*126) + (phys12*84)+(maths11*91) + (maths12*105))/(210+196+175)))
+  const completion = {
+    chem11,
+    chem12,
+    phys11,
+    phys12,   
+    maths11,
+    maths12,
+    chemistryTotalOb,
+    physicsTotalOb,
+    mathsTotalOb,
+    total
+  }
   res.status(200).json({
     message: true,
     user,
+    completion,
     userSigned: req.user._id,
   });
 });
@@ -369,26 +420,26 @@ exports.changeCoverPhotoStu = errorCatcherAsync(async (req, res, next) => {
   const user = await Student.findById(req.user._id);
   if (!user) {
     return next(new ErrorHandler("Invalid Request", 500));
-  }  
+  }
   if (req.body.avatar) {
-    if(user.coverImg.public_URI !== '/images/cover.img'){
+    if (user.coverImg.public_URI !== "/images/cover.img") {
       await cloudinary.v2.uploader.destroy(user.coverImg.public_ID);
     }
-      const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
-        folder: "covers",
-        width: 1000,
-        crop: "scale",
-      }); 
-      user.coverImg = { public_ID: myCloud.public_id, public_URI: myCloud.secure_url }
-      await user.save({validateBeforeSave:false})  
-      res.status(200).json({
-        success: true,
-      });
-  
-  
-  } 
+    const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
+      folder: "covers",
+      width: 1000,
+      crop: "scale",
+    });
+    user.coverImg = {
+      public_ID: myCloud.public_id,
+      public_URI: myCloud.secure_url,
+    };
+    await user.save({ validateBeforeSave: false });
+    res.status(200).json({
+      success: true,
+    });
+  }
 });
-
 
 // //  update personal info
 
@@ -424,6 +475,1802 @@ exports.updateStudentProfile = errorCatcherAsync(async (req, res, next) => {
   res.status(200).json({
     success: true,
   });
+});
+exports.getSyllabusTracker = errorCatcherAsync(async (req, res, next) => {
+  const { subject, division } = req.body;
+
+  let newData;
+  if (division === 11 && subject === "Chemistry") {
+    newData = [
+      {
+        unit: "Mole Concept",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Atomic Structure",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Thermodynamics and Thermochemistry",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Chemical Equilibrium",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Ionic Equilibrium",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Periodic Table",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Chemical Bonding",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "IUPAC Nomenclature",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Isomerism",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "General Organic Chemistry (GOC)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Reaction Mechanism",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Alkane, Alkene, Alkyne (Hydrocarbons)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Aromatic Hydrocarbons",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  } else if (division === 12 && subject === "Chemistry") {
+    newData = [
+      {
+        unit: "Volumetric Analysis",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Chemical Kinetics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Electrochemistry",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Halogen Derivatives",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Alcohols, Phenols, and Ethers",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Aldehydes and Ketones (Carbonyl Compounds)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Carboxylic Acids and Derivatives",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Amines",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Biomolecules",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "p-block Elements (Groups 13 to 18)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Coordination Compounds",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "d and f-Block Elements",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  } else if (division === 11 && subject === "Physics") {
+    newData = [
+      {
+        unit: "Maths in Physics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Unit and Dimensions",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Vectors",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "1D Motion",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "2D Motion",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Newton's Laws of Motion",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Work, Power, Energy",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Circular Motion",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Center of Mass and Momentum Conservation",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Rotational Motion",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Gravitation",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Oscillation (SHM)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Fluid Mechanics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Waves",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Temperature and Thermal Properties of Matter",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Kinetic Theory of Gases",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Laws of Thermodynamics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Heat Transfer",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  } else if (division === 12 && subject === "Physics") {
+    newData = [
+      {
+        unit: "Electrostatics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Current Electricity",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Magnetism",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Geometric Optics and Optical Instruments",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Wave Optics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Experimental Physics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Photoelectric Effect and Matter Waves",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Atomic Structure",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Nuclear Physics and Radioactivity",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Semiconductors",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Electromagnetic Induction",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Alternating Current and EM Waves",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  } else if (division === 11 && subject === "Maths") {
+    newData = [
+      {
+        unit: "Sets and Relations",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Trigonometric Ratios",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Trigonometric Equations",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Quadratic Equations",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Sequences & Series",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Binomial Theorem",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Permutations and Combinations",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Complex Numbers",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Straight Lines and Pair of Straight Lines",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Circles",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Conic Sections (Parabola, Ellipse, Hyperbola)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Statistics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Probability",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  } else if (division === 12 && subject === "Maths") {
+    newData = [
+      {
+        unit: "Functions",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Inverse Trigonometric Functions",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Matrices",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Determinants",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Limits",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Continuity & Differentiability",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Methods of differentiation",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Application of derivatives",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Indefinite Integration",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Definite Integration",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Area under the curve",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Differential Equation",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Vector",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Three-Dimensional Geometry",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Probability",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  }
+
+  let syllabusProgress = await SyllabusProgress.findOne({
+    studentId: req.user.id,
+    subject: subject,
+    division: division,
+  });
+
+  if (!syllabusProgress) {
+    return res.status(200).json({
+      message: newData,
+    });
+  } else {
+    return res.status(200).json({
+      message: syllabusProgress.progress,
+    });
+  }
+});
+
+exports.updateTracker = errorCatcherAsync(async (req, res, next) => {
+  const { unitIndex, field, value, subject, division } = req.body;
+  let newData;
+  if (division === 11 && subject === "Chemistry") {
+    newData = [
+      {
+        unit: "Mole Concept",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Atomic Structure",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Thermodynamics and Thermochemistry",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Chemical Equilibrium",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Ionic Equilibrium",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Periodic Table",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Chemical Bonding",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "IUPAC Nomenclature",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Isomerism",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "General Organic Chemistry (GOC)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Reaction Mechanism",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Alkane, Alkene, Alkyne (Hydrocarbons)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Aromatic Hydrocarbons",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  } else if (division === 12 && subject === "Chemistry") {
+    newData = [
+      {
+        unit: "Volumetric Analysis",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Chemical Kinetics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Electrochemistry",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Halogen Derivatives",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Alcohols, Phenols, and Ethers",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Aldehydes and Ketones (Carbonyl Compounds)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Carboxylic Acids and Derivatives",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Amines",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Biomolecules",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "p-block Elements (Groups 13 to 18)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Coordination Compounds",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "d and f-Block Elements",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  } else if (division === 11 && subject === "Physics") {
+    newData = [
+      {
+        unit: "Maths in Physics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Unit and Dimensions",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Vectors",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "1D Motion",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "2D Motion",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Newton's Laws of Motion",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Work, Power, Energy",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Circular Motion",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Center of Mass and Momentum Conservation",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Rotational Motion",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Gravitation",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Oscillation (SHM)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Fluid Mechanics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Waves",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Temperature and Thermal Properties of Matter",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Kinetic Theory of Gases",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Laws of Thermodynamics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Heat Transfer",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  } else if (division === 12 && subject === "Physics") {
+    newData = [
+      {
+        unit: "Electrostatics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Current Electricity",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Magnetism",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Geometric Optics and Optical Instruments",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Wave Optics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Experimental Physics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Photoelectric Effect and Matter Waves",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Atomic Structure",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Nuclear Physics and Radioactivity",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Semiconductors",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Electromagnetic Induction",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Alternating Current and EM Waves",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  } else if (division === 11 && subject === "Maths") {
+    newData = [
+      {
+        unit: "Sets and Relations",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Trigonometric Ratios",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Trigonometric Equations",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Quadratic Equations",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Sequences & Series",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Binomial Theorem",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Permutations and Combinations",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Complex Numbers",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Straight Lines and Pair of Straight Lines",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Circles",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Conic Sections (Parabola, Ellipse, Hyperbola)",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Statistics",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Probability",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  } else if (division === 12 && subject === "Maths") {
+    newData = [
+      {
+        unit: "Functions",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Inverse Trigonometric Functions",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Matrices",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Determinants",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Limits",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Continuity & Differentiability",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Methods of differentiation",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Application of derivatives",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Indefinite Integration",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Definite Integration",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Area under the curve",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Differential Equation",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Vector",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Three-Dimensional Geometry",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+      {
+        unit: "Probability",
+        theory: false,
+        examples: false,
+        questions: false,
+        pyqs: false,
+        test: false,
+        revision1: false,
+        revision2: false,
+      },
+    ];
+  }
+
+  let syllabusProgress = await SyllabusProgress.findOne({
+    studentId: req.user.id,
+    subject: subject,
+    division: division,
+  });
+
+  if (!syllabusProgress) {
+    syllabusProgress = await SyllabusProgress.create({
+      studentId: req.user.id, // Use student ID from the request user
+      subject: subject,
+      division: division,
+      progress: newData, // Initialize with predefined units
+    });
+  }
+  syllabusProgress.progress[unitIndex][field] = value;
+
+  const calculateCompletionPercentage = (data) => {
+    let totalFields = 0;
+    let completedFields = 0;
+
+    data.forEach((unitDoc) => {
+      const unit = unitDoc.toObject();
+      const fields = Object.keys(unit).filter((key) => key !== "unit");
+      totalFields += fields.length;
+      completedFields += fields.reduce(
+        (acc, key) => acc + (unit[key] ? 1 : 0),
+        0
+      );
+    });
+    const completionPercentage = (completedFields / totalFields) * 100;
+    return Math.round(completionPercentage);
+  };
+  if (subject === "Chemistry") {
+    if (division === 11) {
+      syllabusProgress.chemistry11 = Math.round(calculateCompletionPercentage(
+        syllabusProgress.progress
+      ))
+    }
+    if (division === 12) {
+      syllabusProgress.chemistry12 = Math.round(calculateCompletionPercentage(
+        syllabusProgress.progress
+      ))
+    }
+  }
+  if (subject === "Physics") {
+    if (division === 11) {
+      syllabusProgress.physics11 = Math.round(calculateCompletionPercentage(
+        syllabusProgress.progress
+      ))
+    }
+    if (division === 12) {
+      syllabusProgress.physics12 = Math.round(calculateCompletionPercentage(
+        syllabusProgress.progress
+      ))
+    }
+  }
+  if (subject === "Maths") {
+    if (division === 11) {
+      syllabusProgress.maths = Math.round(calculateCompletionPercentage(
+        syllabusProgress.progress
+      ))
+    }
+    if (division === 12) {
+      syllabusProgress.maths12 = Math.round(calculateCompletionPercentage(
+        syllabusProgress.progress
+      ))
+    }
+  }
+  await syllabusProgress.save();
+
+  return res.json({ message: "Syllabus progress updated", syllabusProgress });
 });
 
 //Update mentor info
