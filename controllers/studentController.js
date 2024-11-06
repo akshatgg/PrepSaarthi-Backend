@@ -1330,7 +1330,6 @@ exports.getSyllabusTracker = errorCatcherAsync(async (req, res, next) => {
     ];
   }
 
-  console.log(req.user);
   let syllabusProgress = await SyllabusProgress.findOne({
     studentId: req.user.id,
     subject: subject,
