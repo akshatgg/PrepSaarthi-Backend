@@ -1143,6 +1143,25 @@ exports.getMentorReviews = errorCatcherAsync(async (req, res, next) => {
     reviews: mentor.reviews,
   });
 });
+exports.verifyCertificate = errorCatcherAsync(async (req, res, next) => {
+  const certId = "CERT-1706391743665-534829"
+  if(req.body.cid === certId){
+    res.status(200).json({
+      success: true,
+      isValid: true,
+      holder: 'Vaibhav Markandeya Singh',
+      duration:'01/09/2024-30/10/2024',
+      certificateId:certId
+    });
+  }
+ else {
+  res.status(200).json({
+    success: true,
+    isValid: false,
+  });
+  }
+
+});
 
 //Generate OTP
 const generateOtp = async (user) => {
