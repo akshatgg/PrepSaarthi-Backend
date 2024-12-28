@@ -24,8 +24,9 @@ exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
     return next(new ErrorHandler("Account already exists", 400));
   }
 
-  const isVerified = await verifyOTP(req, next);
-  if (!isVerified) {
+  const isVerifiedEmail = await verifyEmailOTP(req, next);
+  const isVerifiedMobile = await verifyMobileOTP(req, next);
+  if (!isVerifiedEmail || !isVerifiedMobile) {
     return next(new ErrorHandler("Incorrect or expired OTP", 400));
   }
   if (req.body.avatar) {
@@ -103,6 +104,73 @@ const verifyOTP = async (req, next) => {
 
   // await Mentor.updateOne({ _id: req.user._id }, { verified: true });
   // await Student.updateOne({ _id: req.user._id }, { verified: true });
+
+  return true;
+};
+
+//seperate function for both verification of numb and email
+export const verifyEmailOTP = async (req, next) => {
+  const otp = req.body.emailOTP;
+  if (!otp) {
+    return next(new ErrorHandler("Please enter the email OTP", 400));
+  }
+
+  const userOTPVerification = await OTPGenerate.find({
+    email: req.body.email,
+  });
+
+  if (userOTPVerification.length <= 0) {
+    return next(
+      new ErrorHandler(
+        "Account doesn't exist or already verified. Please login or signup"
+      )
+    );
+  }
+  const { expiresIn, otp: hashedOTP } = userOTPVerification[0];
+
+  if (expiresIn < Date.now()) {
+    await OTPGenerate.deleteMany({ email: req.body.email });
+    return false;
+  }
+
+  const validOTP = await bcryptjs.compare(otp, hashedOTP);
+
+  if (!validOTP) {
+    return false;
+  }
+
+  return true;
+};
+
+export const verifyMobileOTP = async (req, next) => {
+  const mobOtp = req.body.numberOTP;
+  if (!mobOtp) {
+    return next(new ErrorHandler("Please enter the mobile OTP", 400));
+  }
+
+  const userOTPVerification = await OTPGenerate.find({
+    mobileNumber: req.body.mobileNumber,
+  });
+
+  if (userOTPVerification.length <= 0) {
+    return next(
+      new ErrorHandler(
+        "Account doesn't exist or already verified. Please login or signup"
+      )
+    );
+  }
+  const { expiresIn, mobOtp: hashedMobOTP } = userOTPVerification[0];
+
+  if (expiresIn < Date.now()) {
+    await OTPGenerate.deleteMany({ mobileNumber: req.body.mobileNumber });
+    return false;
+  }
+
+  const validMobOTP = await bcryptjs.compare(mobOtp, hashedMobOTP);
+
+  if (!validMobOTP) {
+    return false;
+  }
 
   return true;
 };
