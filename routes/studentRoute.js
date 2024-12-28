@@ -3,7 +3,7 @@ const express = require("express");
 const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
 const roleAuth = require("../utils/roleAuth");
 
-const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull, changeCoverPhotoStu, updateTracker, getSyllabusTracker,} = require("../controllers/studentController");
+const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull, changeCoverPhotoStu, updateTracker, getSyllabusTracker, verifyMobileOTP, verifyEmailOTP,} = require("../controllers/studentController");
 const { createMentorReview, getMentorReviews, deleteReview } = require("../controllers/mentorController");
 const multer = require("multer");
 const { retriveChat, notificationFetch } = require("../chatService/chatController");
@@ -58,6 +58,8 @@ router
 //   .put(isAuth, roleAuth("admin"), updateRole)
 //   .delete(isAuth, roleAuth("admin"), deleteUser);
 //common routes
-// router.route("/student/verify/otp").post(isAuthorizeStu, verifyOTP)
 
+//adding routing for verification of email and phone
+router.route("/student/verify/emailotp").post(isAuthorizeStu, verifyEmailOTP);
+router.route("/student/verify/numbotp").post(isAuthorizeStu, verifyMobileOTP);
 module.exports = router;
