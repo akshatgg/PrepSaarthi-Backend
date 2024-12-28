@@ -27,6 +27,7 @@ exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
   const isVerifiedEmail = await verifyEmailOTP(req, next);
   const isVerifiedMobile = await verifyMobileOTP(req, next);
   if (!isVerifiedEmail || !isVerifiedMobile) {
+    
     return next(new ErrorHandler("Incorrect or expired OTP", 400));
   }
   if (req.body.avatar) {
