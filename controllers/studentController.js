@@ -13,9 +13,10 @@ const bcryptjs = require("bcryptjs");
 const OTPGenerate = require("../models/userVerficationOtp.js");
 // const OTPGenerate = require('../models/userVerficationOtp.js')
 const sendMail = require("../utils/sendMail.js");
+const { changeCoverPhoto } = require("./mentorController.js");
 //Registering a USER
 
-exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
+const reegisterStudent = errorCatcherAsync(async (req, res, next) => {
   const userCheck = await Mentor.findOne({ email: req.body.email });
   const userMob = await Mentor.findOne({
     mobileNumber: req.body.mobileNumber,
@@ -108,9 +109,9 @@ const verifyOTP = async (req, next) => {
 
   return true;
 };
-
+module.exports = { verifyOTP };
 //seperate function for both verification of numb and email
-export const verifyEmailOTP = async (req, next) => {
+const verifyEmailOTP = async (req, next) => {
   const otp = req.body.emailOTP;
   if (!otp) {
     return next(new ErrorHandler("Please enter the email OTP", 400));
@@ -143,7 +144,7 @@ export const verifyEmailOTP = async (req, next) => {
   return true;
 };
 
-export const verifyMobileOTP = async (req, next) => {
+const verifyMobileOTP = async (req, next) => {
   const mobOtp = req.body.numberOTP;
   if (!mobOtp) {
     return next(new ErrorHandler("Please enter the mobile OTP", 400));
@@ -177,7 +178,7 @@ export const verifyMobileOTP = async (req, next) => {
 };
 // USER Login
 
-exports.loginStudent = errorCatcherAsync(async (req, res, next) => {
+const loginStudent = errorCatcherAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -201,7 +202,7 @@ exports.loginStudent = errorCatcherAsync(async (req, res, next) => {
 
 //Buy Mentorship
 
-exports.buyMentorShipDay = errorCatcherAsync(async (req, res, next) => {
+const buyMentorShipDay = errorCatcherAsync(async (req, res, next) => {
   const { id, price } = req.body;
   const user = await Student.findById(req.user._id);
   if (!user) {
@@ -228,7 +229,7 @@ exports.buyMentorShipDay = errorCatcherAsync(async (req, res, next) => {
 });
 //Buy Mentorship
 
-exports.getAllAssignedMentors = errorCatcherAsync(async (req, res, next) => {
+const getAllAssignedMentors = errorCatcherAsync(async (req, res, next) => {
   const connection = await Connection.find({ studentDetails: req.user.id })
     .populate("studentDetails", "name avatar")
     .populate("mentorDetails", "name avatar");
@@ -237,7 +238,7 @@ exports.getAllAssignedMentors = errorCatcherAsync(async (req, res, next) => {
   });
 });
 // get all connection
-exports.allConnectionSuccessfull = errorCatcherAsync(async (req, res, next) => {
+const allConnectionSuccessfull = errorCatcherAsync(async (req, res, next) => {
   const connection = await Connection.find({
     mentorDetails: req.params.id,
     // isActive: false,
@@ -258,7 +259,7 @@ exports.allConnectionSuccessfull = errorCatcherAsync(async (req, res, next) => {
   });
 });
 //active Mentorship
-exports.getActiveMentorship = errorCatcherAsync(async (req, res, next) => {
+const getActiveMentorship = errorCatcherAsync(async (req, res, next) => {
   const connection = await Connection.find({
     studentDetails: req.user.id,
     isActive: true,
@@ -270,7 +271,7 @@ exports.getActiveMentorship = errorCatcherAsync(async (req, res, next) => {
 
 // Logout user
 
-exports.logout = errorCatcherAsync(async (req, res, next) => {
+const logout = errorCatcherAsync(async (req, res, next) => {
   res.cookie("token", null, {
     expires: new Date(Date.now()),
     httpOnly: true,
@@ -284,7 +285,7 @@ exports.logout = errorCatcherAsync(async (req, res, next) => {
 
 // Forgot Password
 
-exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
+const forgotPass = errorCatcherAsync(async (req, res, next) => {
   const user = await Student.findOne({ email: req.body.email });
 
   if (!user || !user.isActive) {
@@ -322,7 +323,7 @@ exports.forgotPass = errorCatcherAsync(async (req, res, next) => {
 
 // //Reset Password
 
-exports.resetPassord = errorCatcherAsync(async (req, res, next) => {
+const resetPassord = errorCatcherAsync(async (req, res, next) => {
   const resetPasswordToken = crypto
     .createHash("sha256")
     .update(req.params.tkid)
@@ -363,7 +364,7 @@ exports.resetPassord = errorCatcherAsync(async (req, res, next) => {
 
 // // Get User Detail
 
-exports.getStudentDetails = errorCatcherAsync(async (req, res, next) => {
+const getStudentDetails = errorCatcherAsync(async (req, res, next) => {
   const user = await Student.findById(req.params.id);
   if (!user.isActive) {
     return next(new ErrorHandler("No SUch Account Exists", 404));
@@ -391,7 +392,7 @@ exports.getStudentDetails = errorCatcherAsync(async (req, res, next) => {
 });
 // // Get User Detail
 
-exports.loadUserDetails = errorCatcherAsync(async (req, res, next) => {
+const loadUserDetails = errorCatcherAsync(async (req, res, next) => {
   const user = await Student.findById(req.user.id);
   if (!user.isActive) {
     return next(new ErrorHandler("No SUch Account Exists", 404));
@@ -456,7 +457,7 @@ exports.loadUserDetails = errorCatcherAsync(async (req, res, next) => {
 
 // // Update User password
 
-exports.updatePassword = errorCatcherAsync(async (req, res, next) => {
+const updatePassword = errorCatcherAsync(async (req, res, next) => {
   const user = await Student.findById(req.user.id).select("+password");
 
   if (!req.body.oldPassword) {
@@ -485,7 +486,7 @@ exports.updatePassword = errorCatcherAsync(async (req, res, next) => {
   jwtToken(user, 200, res);
 });
 
-exports.changeCoverPhotoStu = errorCatcherAsync(async (req, res, next) => {
+const changeCoverPhotoStu = errorCatcherAsync(async (req, res, next) => {
   const user = await Student.findById(req.user._id);
   if (!user) {
     return next(new ErrorHandler("Invalid Request", 500));
@@ -512,7 +513,7 @@ exports.changeCoverPhotoStu = errorCatcherAsync(async (req, res, next) => {
 
 // //  update personal info
 
-exports.updateStudentProfile = errorCatcherAsync(async (req, res, next) => {
+const updateStudentProfile = errorCatcherAsync(async (req, res, next) => {
   const newUserData = {
     email: req.body.email,
     name: req.body.name,
@@ -545,7 +546,7 @@ exports.updateStudentProfile = errorCatcherAsync(async (req, res, next) => {
     success: true,
   });
 });
-exports.getSyllabusTracker = errorCatcherAsync(async (req, res, next) => {
+const getSyllabusTracker = errorCatcherAsync(async (req, res, next) => {
   const { subject, division } = req.body;
 
   let newData;
@@ -1416,7 +1417,7 @@ exports.getSyllabusTracker = errorCatcherAsync(async (req, res, next) => {
   }
 });
 
-exports.updateTracker = errorCatcherAsync(async (req, res, next) => {
+const updateTracker = errorCatcherAsync(async (req, res, next) => {
   const { unitIndex, field, value, subject, division } = req.body;
   let newData;
   if (division === 11 && subject === "Chemistry") {
@@ -2404,7 +2405,7 @@ exports.updateTracker = errorCatcherAsync(async (req, res, next) => {
 // });
 
 // Get a single user
-exports.getSingleUsers = errorCatcherAsync(async (req, res, next) => {
+const getSingleUsers = errorCatcherAsync(async (req, res, next) => {
   const user = await Student.findById(req.params.id).select(
     "name exam avatar pricePerMonth pricePerDay collegeName branch yearOfStudy"
   );
@@ -2420,7 +2421,7 @@ exports.getSingleUsers = errorCatcherAsync(async (req, res, next) => {
 });
 // //  Get all Users
 
-exports.getAllStudents = errorCatcherAsync(async (req, res, next) => {
+const getAllStudents = errorCatcherAsync(async (req, res, next) => {
   const users = await Student.find({
     role: "mentor",
     mentoringStatus: "active",
@@ -2514,3 +2515,25 @@ exports.getAllStudents = errorCatcherAsync(async (req, res, next) => {
 //     message: `${userName} removed successfully`,
 //   });
 // });
+module.exports = {
+  verifyMobileOTP,
+  allConnectionSuccessfull,
+  getActiveMentorship,
+  logout,
+  forgotPass,
+  resetPassord,
+  getStudentDetails,
+  loadUserDetails,
+  getSyllabusTracker,
+  updateTracker,
+  verifyEmailOTP,
+  reegisterStudent,
+  loginStudent,
+  buyMentorShipDay,
+  getAllAssignedMentors,
+  getAllStudents,
+  getSingleUsers,
+  updatePassword,
+  updateStudentProfile,
+  changeCoverPhotoStu,
+};
