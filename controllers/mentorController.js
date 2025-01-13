@@ -22,18 +22,18 @@ exports.uploadMulter = errorCatcherAsync(async (req, res, next) => {
 });
 
 exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
-  const userCheck = await Student.findOne({ email: req.body.email });
-  const userMob = await Student.findOne({
-    mobileNumber: req.body.mobileNumber,
-  });
-  if (userCheck || userMob) {
-    return next(new ErrorHandler("Account already exists", 400));
-  }
+  // const userCheck = await Student.findOne({ email: req.body.email });
+  // const userMob = await Student.findOne({
+  //   mobileNumber: req.body.mobileNumber,
+  // });
+  // if (userCheck || userMob) {
+  //   return next(new ErrorHandler("Account already exists", 400));
+  // }
 
-  const isVerified = await verifyOTP(req, next);
-  if (!isVerified) {
-    return next(new ErrorHandler("Incorrect or expired OTP", 400));
-  }
+  // const isVerified = await verifyOTP(req, next);
+  // if (!isVerified) {
+  //   return next(new ErrorHandler("Incorrect or expired OTP", 400));
+  // }
   if (req.body.avatar) {
     const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
       folder: "avatars",

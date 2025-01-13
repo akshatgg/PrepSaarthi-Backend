@@ -61,11 +61,12 @@ router
   .route("/student/reviews")
   .get(getMentorReviews)
   .delete(isAuthorizeStu, deleteReview);
+
 // router
 //   .route("/admin/users/:id")
-//   .get(isAuth, roleAuth("admin"), getSingleUsers)
-//   .put(isAuth, roleAuth("admin"), updateRole)
 //   .delete(isAuth, roleAuth("admin"), deleteUser);
+  // .get(isAuth, roleAuth("admin"), getSingleUsers)
+  // .put(isAuth, roleAuth("admin"), updateRole)
 //common routes
 
 //adding routing for verification of email and phone
