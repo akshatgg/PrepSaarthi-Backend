@@ -1,11 +1,11 @@
-const express = require("express");
+
 const express = require("express");
 
 const isAuthorize = require("../middlewares/isAuthorize");
 const isAuthorizeStu = require("../middlewares/isAuthorizeStu");
 const roleAuth = require("../utils/roleAuth");
 const rateLimit = require('../utils/checkLastOtp')
-const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, resendOTP, sendOTP, updateMentoringStatus, uploadMulter, headMentorMentors, allConnectionHead, grantStatus, changeCoverPhoto, popUpControll, isTkid, establishNewConnection, getMentorDetailsAdmin, allConnectionMentor, getMentorDetailsByMob, getConnectionByMob, getMentorByMob, swapConnection, checkMail, verifyCertificate, sendOTPEmail } = require("../controllers/mentorController");
+const { registerMentor, loginMentor, logout, forgotPass, resetPassord, getMentorDetails, updatePassword, updateProfile, updateMentorInfo, getSingleUsers, getAllMentors, loadUserDetails, updateMentorInfoAfter, getAllMentorByStatus, updateRole, getAllStudents, deleteUser, getAllMentorsAdmin, getAllAdmin, allConnection, assignConnection, removeConnection, allMentorConnection, resendOTP, sendOTP, updateMentoringStatus, uploadMulter, headMentorMentors, allConnectionHead, grantStatus, changeCoverPhoto, popUpControll, isTkid, establishNewConnection, getMentorDetailsAdmin, allConnectionMentor, getMentorDetailsByMob, getConnectionByMob, getMentorByMob, swapConnection, checkMail, verifyCertificate, sendOTPEmail,sendOTPMobile } = require("../controllers/mentorController");
 const multer = require("multer");
 const { retriveChat, notificationFetch } = require("../chatService/chatController");
 const storage = multer.memoryStorage();
