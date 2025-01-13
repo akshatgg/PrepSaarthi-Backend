@@ -16,21 +16,21 @@ const sendMail = require("../utils/sendMail.js");
 const { changeCoverPhoto } = require("./mentorController.js");
 //Registering a USER
 
-const reegisterStudent = errorCatcherAsync(async (req, res, next) => {
-  // const userCheck = await Mentor.findOne({ email: req.body.email });
-  // const userMob = await Mentor.findOne({
-  //   mobileNumber: req.body.mobileNumber,
-  // });
-  // if (userCheck || userMob) {
-  //   return next(new ErrorHandler("Account already exists", 400));
-  // }
 
-  // const isVerifiedEmail = await verifyEmailOTP(req, next);
-  // const isVerifiedMobile = await verifyMobileOTP(req, next);
-  // if (!isVerifiedEmail || !isVerifiedMobile) {
-    
-  //   return next(new ErrorHandler("Incorrect or expired OTP", 400));
-  // }
+exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
+  const userCheck = await Mentor.findOne({ email: req.body.email });
+  const userMob = await Mentor.findOne({
+    mobileNumber: req.body.mobileNumber,
+  });
+  if (userCheck || userMob) {
+    return next(new ErrorHandler("Account already exists", 400));
+  }
+
+  const isVerified = await verifyOTP(req, next);
+  if (!isVerified) {
+    return next(new ErrorHandler("Incorrect or expired OTP", 400));
+  }
+
   if (req.body.avatar) {
     const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
       folder: "avatars",
@@ -109,6 +109,7 @@ const verifyOTP = async (req, next) => {
 
   return true;
 };
+
 module.exports = { verifyOTP };
 //seperate function for both verification of numb and email
 const verifyEmailOTP = async (req, next) => {
@@ -176,6 +177,7 @@ const verifyMobileOTP = async (req, next) => {
 
   return true;
 };
+
 // USER Login
 
 const loginStudent = errorCatcherAsync(async (req, res, next) => {
@@ -2514,6 +2516,7 @@ const getAllStudents = errorCatcherAsync(async (req, res, next) => {
 //     sucess: true,
 //     message: `${userName} removed successfully`,
 //   });
+
 // });
 module.exports = {
   verifyMobileOTP,
@@ -2537,3 +2540,6 @@ module.exports = {
   updateStudentProfile,
   changeCoverPhotoStu,
 };
+
+// });
+
