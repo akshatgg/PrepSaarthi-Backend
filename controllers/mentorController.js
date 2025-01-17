@@ -856,6 +856,7 @@ exports.allConnection = errorCatcherAsync(async (req, res, next) => {
     connection: connectionUpdated,
   });
 });
+
 exports.allConnectionHead = errorCatcherAsync(async (req, res, next) => {
   // if(!req.user.isHeadMentor){
   //   return next(new ErrorHandler("Action not allowed", 401));
@@ -998,7 +999,7 @@ exports.popUpControll = errorCatcherAsync(async (req, res, next) => {
   if (!mentor.isHeadMentor) {
     return next(new ErrorHandler("Invalid Request", 401));
   }
-  if (req.body.popUp) {
+  if (req.body.popUp) { 
     mentor.popUp = false;
     await mentor.save();
   }
