@@ -2518,28 +2518,7 @@ const getAllStudents = errorCatcherAsync(async (req, res, next) => {
 //   });
 
 // });
-module.exports = {
-  verifyMobileOTP,
-  allConnectionSuccessfull,
-  getActiveMentorship,
-  logout,
-  forgotPass,
-  resetPassord,
-  getStudentDetails,
-  loadUserDetails,
-  getSyllabusTracker,
-  updateTracker,
-  verifyEmailOTP,
-  reegisterStudent,
-  loginStudent,
-  buyMentorShipDay,
-  getAllAssignedMentors,
-  getAllStudents,
-  getSingleUsers,
-  updatePassword,
-  updateStudentProfile,
-  changeCoverPhotoStu,
-};
+
 
 // });
 
