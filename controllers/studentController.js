@@ -18,18 +18,18 @@ const { changeCoverPhoto } = require("./mentorController.js");
 
 
 exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
-  const userCheck = await Mentor.findOne({ email: req.body.email });
-  const userMob = await Mentor.findOne({
-    mobileNumber: req.body.mobileNumber,
-  });
-  if (userCheck || userMob) {
-    return next(new ErrorHandler("Account already exists", 400));
-  }
+  // const userCheck = await Mentor.findOne({ email: req.body.email });
+  // const userMob = await Mentor.findOne({
+  //   mobileNumber: req.body.mobileNumber,
+  // });
+  // if (userCheck || userMob) {
+  //   return next(new ErrorHandler("Account already exists", 400));
+  // }
 
-  const isVerified = await verifyOTP(req, next);
-  if (!isVerified) {
-    return next(new ErrorHandler("Incorrect or expired OTP", 400));
-  }
+  // const isVerified = await verifyOTP(req, next);
+  // if (!isVerified) {
+  //   return next(new ErrorHandler("Incorrect or expired OTP", 400));
+  // }
 
   if (req.body.avatar) {
     const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
