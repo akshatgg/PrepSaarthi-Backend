@@ -14,6 +14,59 @@ const OTPGenerate = require("../models/userVerficationOtp.js");
 // const OTPGenerate = require('../models/userVerficationOtp.js')
 const sendMail = require("../utils/sendMail.js");
 const { changeCoverPhoto } = require("./mentorController.js");
+
+
+exports.uploadPhysicsNotes = errorCatcherAsync(async (req, res, next) => {
+  try {
+    const { studentId, note } = req.body;  // studentId to identify the student
+
+    // Validate input
+    if (!studentId || !note) {
+      return res.status(400).json({ message: "Student ID and Note are required" });
+    }
+
+    // Find the student by their ID
+    const student = await Student.findById(studentId);
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // Update the physics note for the student
+    student.notePhy = note;
+
+    // Save the updated student document
+    await student.save();
+
+    res.status(200).json({ message: "Physics note updated successfully", note: student.notePhy });
+  } catch (error) {
+    next(error);  // Pass error to the global error handler
+  }
+});
+
+exports.getPhysicsNotes = errorCatcherAsync(async (req, res, next) => {
+  try {
+    // Fetch students who have a physics note
+    const studentsWithNotes = await Student.find({ notePhy: { $exists: true, $ne: null } });
+
+    if (studentsWithNotes.length === 0) {
+      return res.status(404).json({ message: "No physics notes found" });
+    }
+
+    // Respond with the students and their physics notes
+    const notes = studentsWithNotes.map(student => ({
+      studentId: student._id,
+      name: student.name,
+      notePhy: student.notePhy,
+    }));
+
+    res.status(200).json({ notes });
+  } catch (error) {
+    next(error);  // Pass error to the global error handler
+  }
+});
+
+
 //Registering a USER
 
 
