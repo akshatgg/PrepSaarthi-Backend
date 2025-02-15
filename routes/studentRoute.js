@@ -49,8 +49,8 @@ router.route("/student/active/mentorship").get(isAuthorizeStu, getActiveMentorsh
 router.route("/student/get/tracker").post(isAuthorizeStu,getSyllabusTracker);
 router.route("/student/update/tracker").put(isAuthorizeStu, updateTracker);
 router.route("/stu/update/cover").put(isAuthorizeStu, upload.single('avatar'),changeCoverPhotoStu);
-router.route("video/physics/notes").post(uploadphysicsnotes);
-router.route("video/physics/fetch/notes").get(getPhysicsnotes);
+// router.route("video/physics/notes").post(uploadphysicsnotes);
+// router.route("video/physics/fetch/notes").get(getPhysicsnotes);
 // router.route("/student/user/info/:id").get(getSingleUsers);
 
 // // Admin Routes
