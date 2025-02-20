@@ -5,7 +5,7 @@ const router = express.Router();
 const isAuthorizeStu = require("../middlewares/isAuthorizeStu.js");
 const roleAuth = require("../utils/roleAuth.js");
 
-const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull, changeCoverPhotoStu, updateTracker, getSyllabusTracker, verifyMobileOTP, verifyEmailOTP, uploadphysicsnotes,} = require("../controllers/studentController.js");
+const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull, changeCoverPhotoStu, updateTracker, getSyllabusTracker, verifyMobileOTP, verifyEmailOTP} = require("../controllers/studentController.js");
 const { createMentorReview, getMentorReviews, deleteReview } = require("../controllers/mentorController.js");
 const multer = require("multer");
 const { retriveChat, notificationFetch } = require("../chatService/chatController.js");
@@ -49,9 +49,7 @@ router.route("/student/active/mentorship").get(isAuthorizeStu, getActiveMentorsh
 router.route("/student/get/tracker").post(isAuthorizeStu,getSyllabusTracker);
 router.route("/student/update/tracker").put(isAuthorizeStu, updateTracker);
 router.route("/stu/update/cover").put(isAuthorizeStu, upload.single('avatar'),changeCoverPhotoStu);
-// router.route("video/physics/notes").post(uploadphysicsnotes);
-// router.route("video/physics/fetch/notes").get(getPhysicsnotes);
-// router.route("/student/user/info/:id").get(getSingleUsers);
+
 
 // // Admin Routes
 router.route("/student/admin/mentors").get(getAllStudents);

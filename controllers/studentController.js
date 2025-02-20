@@ -16,73 +16,85 @@ const sendMail = require("../utils/sendMail.js");
 const { changeCoverPhoto } = require("./mentorController.js");
 
 
-exports.uploadPhysicsNotes = errorCatcherAsync(async (req, res, next) => {
-  try {
-    const { studentId, note } = req.body;  // studentId to identify the student
 
-    // Validate input
-    if (!studentId || !note) {
-      return res.status(400).json({ message: "Student ID and Note are required" });
-    }
 
-    // Find the student by their ID
-    const student = await Student.findById(studentId);
+// exports.uploadPhysicsNotes = errorCatcherAsync(async (req, res, next) => {
+//   const { studentId, note } = req.body;
 
-    if (!student) {
-      return res.status(404).json({ message: "Student not found" });
-    }
+//   // Validate input
+//   if (!studentId || !note) {
+//     return res.status(400).json({ message: "Student ID and Note are required" });
+//   }
+//   if (!mongoose.Types.ObjectId.isValid(studentId)) {
+//     return res.status(400).json({ message: "Invalid Student ID format" });
+//   }
+//   if (typeof note !== 'string' || note.trim() === "") {
+//     return res.status(400).json({ message: "Note must be a non-empty string" });
+//   }
 
-    // Update the physics note for the student
-    student.notePhy = note;
+//   // Authorization check (assuming authenticated user)
+//   if (req.user._id.toString() !== studentId) {
+//     return res.status(403).json({ message: "Unauthorized to update this student's notes" });
+//   }
 
-    // Save the updated student document
-    await student.save();
+//   // Update with explicit $set operator
+//   const student = await Student.findByIdAndUpdate(
+//     studentId,
+//     { $set: { notePhy: note.trim() } },
+//     { new: true, runValidators: true }
+//   );
 
-    res.status(200).json({ message: "Physics note updated successfully", note: student.notePhy });
-  } catch (error) {
-    next(error);  // Pass error to the global error handler
-  }
-});
+//   if (!student) {
+//     return res.status(404).json({ message: "Student not found" });
+//   }
 
-exports.getPhysicsNotes = errorCatcherAsync(async (req, res, next) => {
-  try {
-    // Fetch students who have a physics note
-    const studentsWithNotes = await Student.find({ notePhy: { $exists: true, $ne: null } });
+//   res.status(200).json({
+//     message: "Physics note updated successfully",
+//     studentId: student._id,
+//     note: student.notePhy,
+//     updatedAt: student.updatedAt
+//   });
+// });
 
-    if (studentsWithNotes.length === 0) {
-      return res.status(404).json({ message: "No physics notes found" });
-    }
+// exports.getPhysicsNotes = errorCatcherAsync(async (req, res, next) => {
+//   try {
+//     // Fetch students who have a physics note
+//     const studentsWithNotes = await Student.find({ notePhy: { $exists: true, $ne: null } });
 
-    // Respond with the students and their physics notes
-    const notes = studentsWithNotes.map(student => ({
-      studentId: student._id,
-      name: student.name,
-      notePhy: student.notePhy,
-    }));
+//     if (studentsWithNotes.length === 0) {
+//       return res.status(404).json({ message: "No physics notes found" });
+//     }
 
-    res.status(200).json({ notes });
-  } catch (error) {
-    next(error);  // Pass error to the global error handler
-  }
-});
+//     // Respond with the students and their physics notes
+//     const notes = studentsWithNotes.map(student => ({
+//       studentId: student._id,
+//       name: student.name,
+//       notePhy: student.notePhy,
+//     }));
+
+//     res.status(200).json({ notes });
+//   } catch (error) {
+//     next(error);  // Pass error to the global error handler
+//   }
+// });
 
 
 //Registering a USER
 
 
 exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
-  // const userCheck = await Mentor.findOne({ email: req.body.email });
-  // const userMob = await Mentor.findOne({
-  //   mobileNumber: req.body.mobileNumber,
-  // });
-  // if (userCheck || userMob) {
-  //   return next(new ErrorHandler("Account already exists", 400));
-  // }
+  const userCheck = await Mentor.findOne({ email: req.body.email });
+  const userMob = await Mentor.findOne({
+    mobileNumber: req.body.mobileNumber,
+  });
+  if (userCheck || userMob) {
+    return next(new ErrorHandler("Account already exists", 400));
+  }
 
-  // const isVerified = await verifyOTP(req, next);
-  // if (!isVerified) {
-  //   return next(new ErrorHandler("Incorrect or expired OTP", 400));
-  // }
+  const isVerified = await verifyOTP(req, next);
+  if (!isVerified) {
+    return next(new ErrorHandler("Incorrect or expired OTP", 400));
+  }
 
   if (req.body.avatar) {
     const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {

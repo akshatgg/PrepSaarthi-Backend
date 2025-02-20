@@ -75,15 +75,15 @@ const studentSchema = new mongoose.Schema({
 
   notePhy: {
     type: String,
-    required: [false, "Please enter your note content"],
+    default: ""
   },
   noteChem: {
     type: String,
-    required: [false, "Please enter your note content"],
+    default: ""
   },
   noteMaths: {
     type: String,
-    required: [false, "Please enter your note content"],
+    default: ""
   },
  
   mentorAssigned: {
