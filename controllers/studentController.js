@@ -55,7 +55,171 @@ const { changeCoverPhoto } = require("./mentorController.js");
 //     updatedAt: student.updatedAt
 //   });
 // });
+exports.uploadPhysicsNotes = async (req, res) => {
+  const { studentId, chapterId } = req.params;
+  const { note, isComplete } = req.body;
 
+  try {
+    // Input validation
+    if (!note || typeof isComplete !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request body'
+      });
+    }
+
+    // Find student and update using atomic operations
+    const updatedStudent = await Student.findOneAndUpdate(
+      { 
+        _id: studentId,
+        'physics.chapterId': chapterId
+      },
+      {
+        $set: {
+          'physics.$.note': note,
+          'physics.$.isComplete': isComplete,
+          'physics.$.lastUpdated': Date.now()
+        }
+      },
+      { new: true, upsert: false }
+    );
+
+    // If chapter doesn't exist, push new entry
+    if (!updatedStudent) {
+      const studentWithNewChapter = await Student.findByIdAndUpdate(
+        studentId,
+        {
+          $push: {
+            physics: {
+              chapterId,
+              note,
+              isComplete
+            }
+          }
+        },
+        { new: true }
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: 'New chapter note created',
+        data: studentWithNewChapter.physics
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Chapter note updated',
+      data: updatedStudent.physics
+    });
+
+  } catch (error) {
+    console.error('Error updating note:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+exports.uploadChemistryNote = async (req, res) => {
+  const { studentId, chapterId } = req.params;
+  const { note, isComplete } = req.body;
+
+  try {
+    // Find the student document
+    const student = await Student.findById(studentId);
+    
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      });
+    }
+
+    // Find existing chapter index
+    const chapterIndex = student.chemistry.findIndex(ch => ch.chapterId === chapterId);
+
+    if (chapterIndex > -1) {
+      // Update existing chapter
+      student.chemistry[chapterIndex].note = note;
+      student.chemistry[chapterIndex].isComplete = isComplete;
+      student.chemistry[chapterIndex].lastUpdated = Date.now(); // Update last updated time
+    } else {
+      // Add new chapter entry
+      student.chemistry.push({
+        chapterId,
+        note,
+        isComplete
+      });
+    }
+
+    // Save the updated document
+    await student.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Chemistry note updated successfully',
+      data: student.chemistry
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+exports.uploadMathsNote = async (req, res) => {
+  const { studentId, chapterId } = req.params;
+  const { note, isComplete } = req.body;
+
+  try {
+    // Find the student document
+    const student = await Student.findById(studentId);
+    
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      });
+    }
+
+    // Find existing chapter index
+    const chapterIndex = student.maths.findIndex(ch => ch.chapterId === chapterId);
+
+    if (chapterIndex > -1) {
+      // Update existing chapter
+      student.maths[chapterIndex].note = note;
+      student.maths[chapterIndex].isComplete = isComplete;
+      student.maths[chapterIndex].lastUpdated = Date.now(); // Update last updated time
+    } else {
+      // Add new chapter entry
+      student.maths.push({
+        chapterId,
+        note,
+        isComplete
+      });
+    }
+
+    // Save the updated document
+    await student.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Mathematics note updated successfully',
+      data: student.maths
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
 // exports.getPhysicsNotes = errorCatcherAsync(async (req, res, next) => {
 //   try {
 //     // Fetch students who have a physics note
@@ -83,18 +247,18 @@ const { changeCoverPhoto } = require("./mentorController.js");
 
 
 exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
-  const userCheck = await Mentor.findOne({ email: req.body.email });
-  const userMob = await Mentor.findOne({
-    mobileNumber: req.body.mobileNumber,
-  });
-  if (userCheck || userMob) {
-    return next(new ErrorHandler("Account already exists", 400));
-  }
+  // const userCheck = await Mentor.findOne({ email: req.body.email });
+  // const userMob = await Mentor.findOne({
+  //   mobileNumber: req.body.mobileNumber,
+  // });
+  // if (userCheck || userMob) {
+  //   return next(new ErrorHandler("Account already exists", 400));
+  // }
 
-  const isVerified = await verifyOTP(req, next);
-  if (!isVerified) {
-    return next(new ErrorHandler("Incorrect or expired OTP", 400));
-  }
+  // const isVerified = await verifyOTP(req, next);
+  // if (!isVerified) {
+  //   return next(new ErrorHandler("Incorrect or expired OTP", 400));
+  // }
 
   if (req.body.avatar) {
     const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
