@@ -22,18 +22,18 @@ exports.uploadMulter = errorCatcherAsync(async (req, res, next) => {
 });
 
 exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
-  // const userCheck = await Student.findOne({ email: req.body.email });
-  // const userMob = await Student.findOne({
-  //   mobileNumber: req.body.mobileNumber,
-  // });
-  // if (userCheck || userMob) {
-  //   return next(new ErrorHandler("Account already exists", 400));
-  // }
+  const userCheck = await Student.findOne({ email: req.body.email });
+  const userMob = await Student.findOne({
+    mobileNumber: req.body.mobileNumber,
+  });
+  if (userCheck || userMob) {
+    return next(new ErrorHandler("Account already exists", 400));
+  }
 
-  // const isVerified = await verifyOTP(req, next);
-  // if (!isVerified) {
-  //   return next(new ErrorHandler("Incorrect or expired OTP", 400));
-  // }
+  const isVerified = await verifyOTP(req, next);
+  if (!isVerified) {
+    return next(new ErrorHandler("Incorrect or expired OTP", 400));
+  }
   if (req.body.avatar) {
     const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
       folder: "avatars",
@@ -51,10 +51,6 @@ exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
       verified: true,
       numVerified: true,
       avatar: { public_ID: myCloud.public_id, public_URI: myCloud.secure_url },
-    });
-    await OTPGenerate.deleteMany({
-      email: req.body.email,
-      mobileNumber: req.body.mobileNumber,
     });
     jwtToken(user, 201, res);
   } else {
@@ -1167,32 +1163,54 @@ exports.verifyCertificate = errorCatcherAsync(async (req, res, next) => {
 //Generate OTP
 const generateOtp = async (user) => {
   const otp = `${Math.floor(10000 + Math.random() * 90000)}`;
-  const mobOtp = `${Math.floor(10000 + Math.random() * 90000)}`;
+
   //Send Mail
   const saltRound = 10;
 
   const hashedOtp = await bcryptjs.hash(otp, saltRound);
-  const hashedMobOtp = await bcryptjs.hash(mobOtp, saltRound);
+
   const otpExists = await OTPGenerate.findOne({
     email: user.email,
-    mobileNumber: user.mobileNumber,
+   
   });
 
   if (!otpExists) {
     await OTPGenerate.create({
       email: user.email,
-      mobileNumber: user.mobileNumber,
+    
       otp: hashedOtp,
-      mobOtp: hashedMobOtp,
+      
       expiresIn: Date.now() + 10 * 60 * 1000,
     });
   } else {
     otpExists.otp = hashedOtp;
-    otpExists.mobOtp = hashedMobOtp;
+   
     otpExists.expiresIn = Date.now() + 10 * 60 * 1000;
     await otpExists.save();
   }
-  return { otp, mobOtp };
+  return { otp };
+};
+
+const generateMobOtp = async (user) => {
+  const mobOtp = `${Math.floor(10000 + Math.random() * 90000)}`;
+  const saltRound = 10;
+  const hashedMobOtp = await bcryptjs.hash(mobOtp, saltRound);
+  const otpExists = await OTPGenerate.findOne({
+    mobileNumber: user.mobileNumber,  
+    });
+    if (!otpExists) {
+      await OTPGenerate.create({ 
+        mobileNumber: user.mobileNumber,
+        mobOtp: hashedMobOtp,
+        expiresIn: Date.now() + 10 * 60 * 1000,
+      });
+    } else {
+      otpExists.mobOtp = hashedMobOtp;
+      otpExists.expiresIn = Date.now() + 10 * 60 * 1000;
+      await otpExists.save();
+    }
+    return { mobOtp };
+
 };
 
 // const veriifyOtp = await
@@ -1234,6 +1252,71 @@ const verifyOTP = async (req, next) => {
 
   // await Mentor.updateOne({ _id: req.user._id }, { verified: true });
   // await Student.updateOne({ _id: req.user._id }, { verified: true });
+
+  return true;
+};
+
+exports.verifyMentorEmailOTP = async (req, next) => {
+  const otp = req.body.emailOTP;
+  if (!otp) {
+    return next(new ErrorHandler("Please enter the email OTP", 400));
+  }
+
+  const userOTPVerification = await OTPGenerate.find({
+    email: req.body.email,
+  });
+
+  if (userOTPVerification.length <= 0) {
+    return next(
+      new ErrorHandler(
+        "Account doesn't exist or already verified. Please login or signup"
+      )
+    );
+  }
+  const { expiresIn, otp: hashedOTP } = userOTPVerification[0];
+
+  if (expiresIn < Date.now()) {
+    await OTPGenerate.deleteMany({ email: req.body.email });
+    return false;
+  }
+
+  const validOTP = await bcryptjs.compare(otp, hashedOTP);
+
+  if (!validOTP) {
+    return false;
+  }
+
+  return true;
+};
+exports.verifyMenMobileOTP = async (req, next) => {
+  const mobOtp = req.body.numberOTP;
+  if (!mobOtp) {
+    return next(new ErrorHandler("Please enter the mobile OTP", 400));
+  }
+
+  const userOTPVerification = await OTPGenerate.find({
+    mobileNumber: req.body.mobileNumber,
+  });
+
+  if (userOTPVerification.length <= 0) {
+    return next(
+      new ErrorHandler(
+        "Account doesn't exist or already verified. Please login or signup"
+      )
+    );
+  }
+  const { expiresIn, mobOtp: hashedMobOTP } = userOTPVerification[0];
+
+  if (expiresIn < Date.now()) {
+    await OTPGenerate.deleteMany({ mobileNumber: req.body.mobileNumber });
+    return false;
+  }
+
+  const validMobOTP = await bcryptjs.compare(mobOtp, hashedMobOTP);
+
+  if (!validMobOTP) {
+    return false;
+  }
 
   return true;
 };
@@ -1398,10 +1481,10 @@ exports.sendOTPMobile = errorCatcherAsync(async (req, res, next) => {
   }
 
   const user = req.body;
-  const otp = await generateOtp(user);
+  const otp = await generateMobOtp(user);
 
   try {
-    const url = "https://www.fast2sms.com/dev/bulkV2";
+    // const url = "https://www.fast2sms.com/dev/bulkV2";
     const data = {
       route: "otp",
       variables_values: otp.mobOtp,
@@ -1411,7 +1494,7 @@ exports.sendOTPMobile = errorCatcherAsync(async (req, res, next) => {
       Authorization: process.env.TEXTSMS,
       "Content-Type": "application/json",
     };
-    await axios.post(url, data, { headers });
+    // await axios.post(url, data, { headers });
 
     const otpGenerated = await OTPGenerate.findOne({
       mobileNumber: user.mobileNumber,
