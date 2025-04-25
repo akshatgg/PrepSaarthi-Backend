@@ -69,8 +69,7 @@ router
 //common routes
 
 //adding routing for verification of email and phone
-router.route("/student/verify/emailotp").post(isAuthorizeStu, verifyEmailOTP);
-router.route("/student/verify/numbotp").post(isAuthorizeStu, verifyMobileOTP);
+router.route("/student/verify/emailotp").post( verifyEmailOTP);
 
 router.route('/student/:studentId/phy/:chapterId')
   .put(isAuthorizeStu, uploadPhysicsNotes);

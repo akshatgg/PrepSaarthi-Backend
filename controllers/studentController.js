@@ -14,6 +14,7 @@ const OTPGenerate = require("../models/userVerficationOtp.js");
 // const OTPGenerate = require('../models/userVerficationOtp.js')
 const sendMail = require("../utils/sendMail.js");
 const { changeCoverPhoto } = require("./mentorController.js");
+const { log } = require("console");
 
 
 
@@ -259,7 +260,8 @@ exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
   // if (!isVerified) {
   //   return next(new ErrorHandler("Incorrect or expired OTP", 400));
   // }
-
+    const isVerified = await verifyEmailOTP(req, res);
+     
   if (req.body.avatar) {
     const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
       folder: "avatars",
@@ -341,38 +343,107 @@ exports.verifyOTP = async (req, next) => {
 
 
 //seperate function for both verification of numb and email
-exports.verifyEmailOTP = async (req, next) => {
-  const otp = req.body.emailOTP;
-  if (!otp) {
-    return next(new ErrorHandler("Please enter the email OTP", 400));
+// exports.verifyEmailOTP = async (req) => {
+//   const otp = req.body.otp;
+//   console.log(req.body);
+//   if (!otp) throw new Error("Please enter the email OTP");
+
+//   const userOTPVerification = await OTPGenerate.find({
+//     email: req.body.email,
+//   });
+// console.log(userOTPVerification);
+//   if (userOTPVerification.length <= 0) {
+//     throw new Error("Account doesn't exist or already verified.");
+//   }
+// console.log(userOTPVerification);
+//   const { expiresIn, otp: hashedOTP } = userOTPVerification[0];
+// console.log(expiresIn, hashedOTP);
+//   if (expiresIn < Date.now()) {
+//     await OTPGenerate.deleteMany({ email: req.body.email });
+//     return false;
+//   }
+// console.log(otp, hashedOTP);
+//   const validOTP = await bcryptjs.compare(otp, hashedOTP);
+//   console.log(validOTP);
+//   if (!validOTP) return false;
+
+//   return true;
+// };
+
+const verifyEmailOTP = async (req, res) => {
+  try {
+    const { otp, email } = req.body;
+    console.log("Request Body:", req.body);
+
+    if (!otp || !email) {
+      console.log("Missing OTP or Email");
+      return res.status(400).json({
+        success: false,
+        message: "Please provide both email and OTP.",
+      });
+    }
+
+    const userOTPVerification = await OTPGenerate.find({ email });
+    console.log("OTP Entries from DB:", userOTPVerification);
+
+    if (!userOTPVerification || userOTPVerification.length === 0) {
+      console.log("No OTP entry found or already used");
+      return res.status(400).json({
+        success: false,
+        message: "Account doesn't exist or OTP already used/expired.",
+      });
+    }
+
+    const { expiresIn, otp: hashedOTP } = userOTPVerification[0];
+    console.log("OTP Expiry:", expiresIn);
+    console.log("Hashed OTP from DB:", hashedOTP);
+
+    if (expiresIn < Date.now()) {
+      console.log("OTP has expired");
+      await OTPGenerate.deleteMany({ email });
+      console.log("Deleted expired OTP from DB");
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new one.",
+      });
+    }
+
+    const validOTP = await bcryptjs.compare(otp, hashedOTP);
+    console.log("OTP Match:", validOTP);
+
+    if (!validOTP) {
+      console.log("OTP did not match");
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP. Please try again.",
+      });
+    }
+
+      
+    await OTPGenerate.deleteMany({ email });
+    console.log("Deleted OTP from DB after successful verification");
+
+    // Optional: Update user status if needed
+    // await User.updateOne({ email }, { $set: { isVerified: true } });
+    // console.log("User marked as verified");
+
+    console.log("OTP Verified Successfully");
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified successfully.",
+    });
+
+  } catch (error) {
+    console.error("Error in verifying OTP:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
-
-  const userOTPVerification = await OTPGenerate.find({
-    email: req.body.email,
-  });
-
-  if (userOTPVerification.length <= 0) {
-    return next(
-      new ErrorHandler(
-        "Account doesn't exist or already verified. Please login or signup"
-      )
-    );
-  }
-  const { expiresIn, otp: hashedOTP } = userOTPVerification[0];
-
-  if (expiresIn < Date.now()) {
-    await OTPGenerate.deleteMany({ email: req.body.email });
-    return false;
-  }
-
-  const validOTP = await bcryptjs.compare(otp, hashedOTP);
-
-  if (!validOTP) {
-    return false;
-  }
-
-  return true;
 };
+exports.verifyEmailOTP = verifyEmailOTP;
+
+
 
 exports.verifyMobileOTP = async (req, next) => {
   const mobOtp = req.body.numberOTP;

@@ -7,15 +7,18 @@ const Payment  = require("../models/paymentModel.js");
 const errorCatcherAsync = require("../utils/errorCatcherAsync");
 const ErrorHandler = require("../utils/errorHandeler.js");
 const sendMail = require("../utils/sendMail.js");
+const jwtToken = require("../utils/jwtToken.js");
 
 exports.checkout = errorCatcherAsync(async (req, res, next) => {
   const amount = req.body.amount * 100
   const duration = req.body.duration
+
   const options = {
     amount , 
     currency: "INR",
   };
   const order = await instance.orders.create(options)
+  
   res.status(200).json({
       success:true,
       duration,

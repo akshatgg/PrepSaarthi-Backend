@@ -30,10 +30,14 @@ exports.registerMentor = errorCatcherAsync(async (req, res, next) => {
     return next(new ErrorHandler("Account already exists", 400));
   }
 
-  const isVerified = await verifyOTP(req, next);
-  if (!isVerified) {
-    return next(new ErrorHandler("Incorrect or expired OTP", 400));
-  }
+  // const isEmailVerified = await verifyMentorEmailOTP(req, res);
+  // if (!isEmailVerified) {
+  //   return next(new ErrorHandler("Incorrect or expired OTP verify your email", 400));
+  // }
+  // const isNumberVerified = await verifyMenMobileOTP(req, res);
+  // if (!isNumberVerified) {
+  //   return next(new ErrorHandler("Incorrect or expired OTP verify your numb", 400));
+  // }
   if (req.body.avatar) {
     const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
       folder: "avatars",
@@ -1256,70 +1260,148 @@ const verifyOTP = async (req, next) => {
   return true;
 };
 
-exports.verifyMentorEmailOTP = async (req, next) => {
-  const otp = req.body.emailOTP;
-  if (!otp) {
-    return next(new ErrorHandler("Please enter the email OTP", 400));
+const verifyMentorEmailOTP = async (req, res) => {
+  try {
+    const { otp, email } = req.body;
+    console.log("Request Body:", req.body);
+
+    if (!otp || !email) {
+      console.log("Missing OTP or Email");
+      return res.status(400).json({
+        success: false,
+        message: "Please provide both email and OTP.",
+      });
+    }
+
+    const userOTPVerification = await OTPGenerate.find({ email });
+    console.log("OTP Entries from DB:", userOTPVerification);
+
+    if (!userOTPVerification || userOTPVerification.length === 0) {
+      console.log("No OTP entry found or already used");
+      return res.status(400).json({
+        success: false,
+        message: "Account doesn't exist or OTP already used/expired.",
+      });
+    }
+
+    const { expiresIn, otp: hashedOTP } = userOTPVerification[0];
+    console.log("OTP Expiry:", expiresIn);
+    console.log("Hashed OTP from DB:", hashedOTP);
+
+    if (expiresIn < Date.now()) {
+      console.log("OTP has expired");
+      await OTPGenerate.deleteMany({ email });
+      console.log("Deleted expired OTP from DB");
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new one.",
+      });
+    }
+
+    const validOTP = await bcryptjs.compare(otp, hashedOTP);
+    console.log("OTP Match:", validOTP);
+
+    if (!validOTP) {
+      console.log("OTP did not match");
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP. Please try again.",
+      });
+    }
+
+    await OTPGenerate.deleteMany({ email });
+    console.log("Deleted OTP from DB after successful verification");
+
+    // Optional: Update mentor status if needed
+    // await Mentor.updateOne({ email }, { $set: { isVerified: true } });
+    // console.log("Mentor marked as verified");
+
+    console.log("OTP Verified Successfully for Mentor");
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified successfully.",
+    });
+
+  } catch (error) {
+    console.error("Error in verifying Mentor OTP:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
-
-  const userOTPVerification = await OTPGenerate.find({
-    email: req.body.email,
-  });
-
-  if (userOTPVerification.length <= 0) {
-    return next(
-      new ErrorHandler(
-        "Account doesn't exist or already verified. Please login or signup"
-      )
-    );
-  }
-  const { expiresIn, otp: hashedOTP } = userOTPVerification[0];
-
-  if (expiresIn < Date.now()) {
-    await OTPGenerate.deleteMany({ email: req.body.email });
-    return false;
-  }
-
-  const validOTP = await bcryptjs.compare(otp, hashedOTP);
-
-  if (!validOTP) {
-    return false;
-  }
-
-  return true;
 };
-exports.verifyMenMobileOTP = async (req, next) => {
-  const mobOtp = req.body.numberOTP;
-  if (!mobOtp) {
-    return next(new ErrorHandler("Please enter the mobile OTP", 400));
+exports.verifyMentorEmailOTP = verifyMentorEmailOTP;
+
+
+
+const verifyMenMobileOTP = async (req, res) => {
+  try {
+    const mobOtp = req.body.otp;
+    const mobileNumber = req.body.mobileNumber;
+
+    console.log("[DEBUG] Request received for OTP verification:", req.body);
+
+    if (!mobOtp || !mobileNumber) {
+      console.log("[DEBUG] Missing OTP or mobile number.");
+      return res.status(400).json({
+        success: false,
+        message: "Please provide both mobile number and OTP.",
+      });
+    }
+
+    const userOTPVerification = await OTPGenerate.findOne({ mobileNumber });
+
+    if (!userOTPVerification) {
+      console.log("[DEBUG] No OTP record found for this mobile number.");
+      return res.status(400).json({
+        success: false,
+        message: "OTP not found or already verified. Please login or signup.",
+      });
+    }
+
+    console.log("[DEBUG] OTP record found:", {
+      expiresIn: userOTPVerification.expiresIn,
+      hashedMobOTP: userOTPVerification.mobOtp,
+    });
+
+    if (userOTPVerification.expiresIn < Date.now()) {
+      console.log("[DEBUG] OTP has expired.");
+      await OTPGenerate.deleteOne({ mobileNumber });
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new one.",
+      });
+    }
+
+    const isValid = await bcryptjs.compare(mobOtp, userOTPVerification.mobOtp);
+
+    if (!isValid) {
+      console.log("[DEBUG] OTP does not match.");
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP. Please try again.",
+      });
+    }
+
+    await OTPGenerate.deleteOne({ mobileNumber });
+    console.log("[DEBUG] OTP verified and record deleted successfully.");
+
+    return res.status(200).json({
+      success: true,
+      message: "Mobile number verified successfully.",
+    });
+
+  } catch (error) {
+    console.error("[DEBUG] Internal Server Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
-
-  const userOTPVerification = await OTPGenerate.find({
-    mobileNumber: req.body.mobileNumber,
-  });
-
-  if (userOTPVerification.length <= 0) {
-    return next(
-      new ErrorHandler(
-        "Account doesn't exist or already verified. Please login or signup"
-      )
-    );
-  }
-  const { expiresIn, mobOtp: hashedMobOTP } = userOTPVerification[0];
-
-  if (expiresIn < Date.now()) {
-    await OTPGenerate.deleteMany({ mobileNumber: req.body.mobileNumber });
-    return false;
-  }
-
-  const validMobOTP = await bcryptjs.compare(mobOtp, hashedMobOTP);
-
-  if (!validMobOTP) {
-    return false;
-  }
-
-  return true;
 };
+exports.verifyMenMobileOTP = verifyMenMobileOTP;
+
+
 
 exports.resendOTP = errorCatcherAsync(async (req, res, next) => {
   const user = req.body;
@@ -1464,58 +1546,83 @@ exports.sendOTP = errorCatcherAsync(async (req, res, next) => {
 });
 
 exports.sendOTPMobile = errorCatcherAsync(async (req, res, next) => {
-  const isUser = await Mentor.findOne({
-    mobileNumber: req.body.mobileNumber,
-  });
-  const isUserStu = await Student.findOne({
-    mobileNumber: req.body.mobileNumber,
-  });
+  const { mobileNumber } = req.body;
+  console.log("[DEBUG] Incoming mobile number:", mobileNumber);
+
+  // Step 1: Check for existing users
+  const isUser = await Mentor.findOne({ mobileNumber });
+  const isUserStu = await Student.findOne({ mobileNumber });
 
   if (isUser || isUserStu) {
+    console.log("[DEBUG] Mobile number already registered.");
     return next(
       new ErrorHandler(
-        "Account already exists with this mobile number, please use a different mobile number",
-        500
+        "Account already exists with this mobile number. Please use a different mobile number.",
+        400
       )
     );
   }
 
-  const user = req.body;
-  const otp = await generateMobOtp(user);
-
   try {
-    // const url = "https://www.fast2sms.com/dev/bulkV2";
+    // Step 2: Generate OTP
+    const otp = await generateMobOtp({ mobileNumber });
+    console.log("[DEBUG] OTP generated:", otp.mobOtp);
+    
+    // Step 3: Send OTP via Fast2SMS (commented out in development)
+    const url = "https://www.fast2sms.com/dev/bulkV2";
     const data = {
       route: "otp",
       variables_values: otp.mobOtp,
-      numbers: user.mobileNumber,
+      numbers: mobileNumber,
     };
     const headers = {
       Authorization: process.env.TEXTSMS,
       "Content-Type": "application/json",
     };
-    // await axios.post(url, data, { headers });
 
-    const otpGenerated = await OTPGenerate.findOne({
-      mobileNumber: user.mobileNumber,
+    console.log("[DEBUG] Prepared SMS payload:", data);
+    console.log("[DEBUG] Authorization Header:", headers.Authorization);
+
+    // Uncomment this line in production
+    try {
+      const response = await axios.post(url, data, { headers });
+      console.log("[DEBUG] SMS API response:", response.data);
+    } catch (err) {
+      console.error("[DEBUG] SMS API error:", err.response?.data || err.message);
+    }
+    
+    
+
+    // Step 4: Update OTP count
+    const otpGenerated = await OTPGenerate.findOne({ mobileNumber });
+    if (otpGenerated) {
+      console.log("[DEBUG] Existing OTP record found. Incrementing count.");
+      otpGenerated.otpCount += 1;
+      await otpGenerated.save({ validateBeforeSave: false });
+      console.log("[DEBUG] OTP count updated.");
+    } else {
+      console.log("[DEBUG] No OTP record found for this mobile number.");
+    }
+
+    // Step 5: Response
+    console.log("[DEBUG] OTP process completed successfully.");
+    res.status(200).json({
+      status: "success",
+      message: "OTP sent successfully to mobile number",
     });
-    otpGenerated.otpCount += 1;
-    await otpGenerated.save({ validateBeforeSave: false });
+
   } catch (e) {
-    console.log(e);
-    await OTPGenerate.deleteMany({
-      mobileNumber: user.mobileNumber,
-    });
+    console.error("[DEBUG] Error occurred during OTP sending:", e);
+
+    await OTPGenerate.deleteMany({ mobileNumber });
+    console.log("[DEBUG] OTP records deleted due to error.");
+
     return next(
-      new ErrorHandler(e?.response?.data?.message || e?.message, 500)
+      new ErrorHandler(e?.response?.data?.message || e?.message || "Failed to send OTP", 500)
     );
   }
-
-  res.status(200).json({
-    status: "success",
-    message: "OTP sent successfully to mobile number",
-  });
 });
+
 
 exports.sendOTPEmail = errorCatcherAsync(async (req, res, next) => {
   const isUser = await Mentor.findOne({

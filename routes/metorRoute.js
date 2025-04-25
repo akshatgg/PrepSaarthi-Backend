@@ -77,13 +77,14 @@ router.route("/student/send/otp").post( rateLimit, sendOTP)
 //for mobile and email otp seperately
 router.route("/student/send/mobile/otp").post( rateLimit,sendOTPMobile)
 router.route("/student/send/email/otp").post( rateLimit,sendOTPEmail)
+router.route("/student/verify/numbotp").post(verifyMenMobileOTP);
 
-router.route("/mentor/send/monile/otp").post( rateLimit,sendOTPMobile)
+router.route("/mentor/send/mobile/otp").post( rateLimit,sendOTPMobile)
 router.route("/mentor/send/email/otp").post( rateLimit,sendOTPEmail)
 router.route("/tkid/isexists").post(isTkid)
 
-router.route("/mentor/verify/emailotp").post(isAuthorize, verifyMentorEmailOTP);
-router.route("/mentor/verify/mobileotp").post(isAuthorize, verifyMenMobileOTP);
+router.route("/mentor/verify/emailotp").post(verifyMentorEmailOTP);
+router.route("/mentor/verify/mobileotp").post(verifyMenMobileOTP);
 
 
 

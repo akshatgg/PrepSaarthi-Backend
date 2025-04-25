@@ -15,12 +15,12 @@ const mentorSchema = new mongoose.Schema({
   verified:{
     type:Boolean,
     default:false,
-    required:true,
+    
   },
   numVerified:{
     type:Boolean,
     default:false,
-    required:true,
+    
   },
   
   email: {
