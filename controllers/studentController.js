@@ -260,7 +260,7 @@ exports.reegisterStudent = errorCatcherAsync(async (req, res, next) => {
   // if (!isVerified) {
   //   return next(new ErrorHandler("Incorrect or expired OTP", 400));
   // }
-    const isVerified = await verifyEmailOTP(req, res);
+  
      
   if (req.body.avatar) {
     const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
