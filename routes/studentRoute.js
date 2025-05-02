@@ -4,7 +4,7 @@ const router = express.Router();
 
 const isAuthorizeStu = require("../middlewares/isAuthorizeStu.js");
 const roleAuth = require("../utils/roleAuth.js");
-
+const sendEmail = require("../utils/sendMail.js");
 const { reegisterStudent, loginStudent , logout,  forgotPass,  resetPassord, loadUserDetails, getStudentDetails, updatePassword, updateStudentProfile, getAllStudents, buyMentorShipDay, getAllAssignedMentors, getActiveMentorship, allConnectionSuccessfull, changeCoverPhotoStu, updateTracker, getSyllabusTracker, verifyMobileOTP, verifyEmailOTP,uploadPhysicsNotes, uploadChemistryNote, uploadMathsNote} = require("../controllers/studentController.js");
 const { createMentorReview, getMentorReviews, deleteReview } = require("../controllers/mentorController.js");
 const multer = require("multer");
@@ -77,6 +77,31 @@ router.route('/student/:studentId/chem/:chapterId')
   .put(isAuthorizeStu, uploadChemistryNote);
 router.route('/student/:studentId/maths/:chapterId')
   .put(isAuthorizeStu, uploadMathsNote );
+
+
+
+  router.route('/test-email').get(async (req, res) => {
+    try {
+      await sendEmail({
+        email: 'akshatg9636@gmail.com', // replace with recipient email
+        subject: 'Test Email from PrepSaarthi',
+        message: `<h1>Hello from Team@prepsaarthi.com</h1><p>This is a test email.</p>`,
+      });
+  
+      res.status(200).json({
+        success: true,
+        message: 'Email sent successfully',
+      });
+    } catch (error) {
+      console.error('Test Mail Error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send test email',
+      });
+    }
+  });
+  
+  
 
 
 module.exports = router;
