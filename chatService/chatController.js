@@ -332,7 +332,7 @@ await sendMail({
         const senderDetails = await Student.findById(senderId) || await Mentor.findById(senderId) ;
 
         if (!chat) {
-          if(content.length > 500){
+          if(content.length > 100){
             socket.emit('errors',({errorType:'message-limit',message:'You must buy the mentorship to continue chatting', }))
             return;
           }
